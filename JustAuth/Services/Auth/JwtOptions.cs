@@ -26,6 +26,8 @@ namespace JustAuth.Services.Auth
 
         public class JwtClaim {
             public string Name {get;set;}
+
+            public string ModelProperty {get;set;}
             public IEnumerable<string> AccessValues{get;set;}
         }
     }

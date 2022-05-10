@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using JustAuth.Data;
 
 namespace JustAuth.Controllers
@@ -13,6 +14,10 @@ namespace JustAuth.Controllers
             public string Username {get;set;}
             //public string Email {get;set;}
             public bool IsEmailVerified {get;set;}
+            [JsonConstructor]
+            public AppUserDTO() {
+
+            }
             public AppUserDTO  (AppUser user) {
                 Id = user.Id;
                 Username = user.Username;

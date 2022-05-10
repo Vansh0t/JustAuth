@@ -7,6 +7,8 @@ using JustAuth.Services.Auth;
 using JustAuth.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Builder;
+using System;
+
 namespace JustAuth.Tests.Fixtures
 {
     public class AuthAppFactory:WebApplicationFactory<Program>
@@ -18,6 +20,7 @@ namespace JustAuth.Tests.Fixtures
         public const string UNVERIFIED_USER_EMAIL = "act_unverified@test.com";
         public const string UNVERIFIED_USER_USERNAME = "act_unverified";
         public const string UNVERIFIED_USER_PASSWORD = "act_unverified_pwd111";
+        public const string UNVERIFIED_USER_VRFT = "UNVRFT";
         private static bool isDbInitialized;
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -41,10 +44,12 @@ namespace JustAuth.Tests.Fixtures
             });
             
             builder.Configure(app=>{
+                Console.WriteLine("TTWADWAD");
                 app.UseHttpsRedirection();
                 app.UseStaticFiles();
                 app.UseRouting();
-
+                app.UseAuthentication();
+                app.UseAuthorization();
                 app.UseEndpoints(opt=>{
                     opt.MapControllers();
                 });
@@ -66,7 +71,9 @@ namespace JustAuth.Tests.Fixtures
             TestUser unverifiedUser = new () {
                 Email = UNVERIFIED_USER_EMAIL,
                 Username = UNVERIFIED_USER_USERNAME,
-                PasswordHash = Cryptography.HashPassword(UNVERIFIED_USER_PASSWORD)
+                PasswordHash = Cryptography.HashPassword(UNVERIFIED_USER_PASSWORD),
+                EmailVrfToken = "UNVRFT",
+                EmailVrfTokenExpiration = DateTime.UtcNow.AddHours(24)
             };
             context.AddRange(verifiedUser, unverifiedUser);
             context.SaveChanges();

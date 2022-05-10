@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using JustAuth.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,9 @@ namespace JustAuth.Controllers
         }
         public static string GetBaseUrl(this HttpRequest request) {
             return $"{request.Scheme}://{request.Host.Value}";
+        }
+        public static int GetUserId(this ClaimsPrincipal user) {
+            return int.Parse(user.Claims.First(_=>_.Type=="Id").Value);
         }
         /// <summary>
         /// Shortcut for creating Dictionary<string,object>

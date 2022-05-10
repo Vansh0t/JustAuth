@@ -107,16 +107,58 @@ namespace JustAuth.Controllers
             );
         }
         [HttpGet("email/vrf")]
-        public async Task<IActionResult> EmailVerfification(string vrft) {
+        public async Task<IActionResult> EmailVerifification(string vrft) {
             if(vrft is null || vrft=="") {
-                _logger.LogWarning("Got SignIn request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got EmailVerfification request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
                 return BadRequest("Invalid signin data.");
             }
             var result = await _userManager.VerifyEmailAsync(vrft);
             if(result.IsError)
                 return result.ToActionResult();
-            return Redirect("/");
+            await _context.SaveChangesAsync();
+            return Ok();
         }
+        [Authorize("IsEmailVerified")]
+        [HttpPost("email/change")]
+        public async Task<IActionResult> EmailChange(Dictionary<string,string> data) {
+            string newEmail;
+            try {
+                newEmail = data["newEmail"];
+            }
+            catch {
+                _logger.LogWarning("Got EmailChange request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                return BadRequest("Invalid signin data.");
+            }
+            var id = HttpContext.User.GetUserId();
+            var userResult = await _userManager.GetUserAsync(id);
+            if(userResult.IsError)
+                return userResult.ToActionResult();
+            var result = await _userManager.SetEmailChangeAsync(userResult.ResultObject, newEmail);
+            if(result.IsError)
+                return result.ToActionResult();
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+        public async Task<IActionResult> PasswordReset1(Dictionary<string, string> data) {
+            //CREATE METHOD TO GET USER BY USERNAME!!!
+            string email;
+            try {
+                email = data["email"];
+            }
+            catch {
+                _logger.LogWarning("Got PasswordReset1 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                return BadRequest("Invalid signin data.");
+            }
+            var id = HttpContext.User.GetUserId();
+            var userResult = await _userManager.GetUserAsync(id);
+            if(userResult.IsError)
+                return userResult.ToActionResult();
+            var result = await _userManager.SetPasswordResetAsync(userResult.ResultObject);
+            if(result.IsError)
+                return userResult.ToActionResult();
+            return Ok();
+        }
+
 
 
 

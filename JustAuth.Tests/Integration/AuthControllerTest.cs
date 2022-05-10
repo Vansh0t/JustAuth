@@ -8,9 +8,11 @@ namespace JustAuth.Tests.Integration
     using System;
     using System.Collections.Generic;
     using System.Net;
+    using System.Net.Http.Json;
     using System.Text;
     using System.Threading.Tasks;
     using Fixtures;
+    using JustAuth.Controllers;
     using Microsoft.AspNetCore.TestHost;
     using Xunit;
 
@@ -39,15 +41,52 @@ namespace JustAuth.Tests.Integration
         [Fact]
         public async Task TestSignUp() {
             appClient = app.CreateClient();
-            Dictionary<string, string> data = new();
-            data.Add("username", NEW_USER_USERNAME);
-            data.Add("email", NEW_USER_EMAIL);
-            data.Add("password", NEW_USER_PASSWORD);
-            data.Add("passwordConf", NEW_USER_PASSWORD);
-            var serialized = JsonConvert.SerializeObject(data);
-            var sContent = new StringContent(serialized, Encoding.UTF8, "application/json");
-            var result = await appClient.PostAsync("/auth/signup", sContent);
+            var content = MakeStringContent(
+                "username", NEW_USER_USERNAME,
+                "email", NEW_USER_EMAIL,
+                "password", NEW_USER_PASSWORD,
+                "passwordConf", NEW_USER_PASSWORD
+            );
+            var result = await appClient.PostAsync("/auth/signup", content);
             Assert.Equal(201, (int)result.StatusCode);
+        }
+        [Fact]
+        public async Task TestEmailVerification() {
+            appClient = app.CreateClient();
+            var result = await appClient.GetAsync($"/auth/email/vrf?vrft={AuthAppFactory.UNVERIFIED_USER_VRFT}");
+            Assert.Equal(200, (int)result.StatusCode);
+        }
+        [Fact]
+        public async Task TestEmailChangeForbidden() {
+            appClient = app.CreateClient();
+            var content = MakeStringContent("newEmail", "some@test.com");
+            var result = await appClient.PostAsync("/auth/email/change", content);
+            Assert.Equal(401, (int)result.StatusCode);
+            var signinContent = MakeStringContent(
+                "username", AuthAppFactory.UNVERIFIED_USER_USERNAME,
+                "password", AuthAppFactory.UNVERIFIED_USER_PASSWORD
+            );
+            result = await appClient.PostAsync("/auth/signin", signinContent);
+            var resp = await result.Content.ReadFromJsonAsync<DTO.SignInResponse>();
+            appClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {resp.Jwt}");
+            result = await appClient.PostAsync("/auth/email/change", content);
+            Assert.Equal(403, (int)result.StatusCode);
+        }
+        [Fact]
+        public async Task TestEmailChangeSuccess() {
+            appClient = app.CreateClient();
+            var content = MakeStringContent("newEmail", "some@test.com");
+            var result = await appClient.PostAsync("/auth/email/change", content);
+            Assert.Equal(401, (int)result.StatusCode);
+            var signinContent = MakeStringContent(
+                "username", AuthAppFactory.UNVERIFIED_USER_USERNAME,
+                "password", AuthAppFactory.UNVERIFIED_USER_PASSWORD
+            );
+            result = await appClient.PostAsync("/auth/signin", signinContent);
+            var resp = await result.Content.ReadFromJsonAsync<DTO.SignInResponse>();
+            appClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {resp.Jwt}");
+            result = await appClient.PostAsync("/auth/email/change", content);
+            Assert.Equal(403, (int)result.StatusCode);
         }
         //Get the same email as used for sending, i.e send email to self
         private string GetNewUserEmail() {
@@ -57,6 +96,15 @@ namespace JustAuth.Tests.Integration
             confBuilder.AddJsonFile("justauth.json");
             var config = confBuilder.Build();
             return new EmailService(config, logger).EmailingOptions.Sender;
+        }
+        private StringContent MakeStringContent(params string[] kvp) {
+            if(kvp.Length == 0 || kvp.Length%2!=0) throw new ArgumentException();
+            Dictionary<string, string> dict = new();
+            for(int i = 0; i < kvp.Length; i+=2) {
+                dict.Add(kvp[i], kvp[i+1]);
+            }
+            var serialized = JsonConvert.SerializeObject(dict);
+            return new StringContent(serialized, Encoding.UTF8, "application/json");
         }
     }
 }

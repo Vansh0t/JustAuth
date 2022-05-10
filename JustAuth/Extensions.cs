@@ -88,6 +88,7 @@ namespace JustAuth
                                 });
             services.AddAuthorization(options=> {
                 foreach(var claim in jwtOptions.Claims) {
+                    Console.WriteLine($"{claim.Name}, {claim.AccessValues}");
                     options.AddPolicy(claim.Name, policy=>policy.RequireClaim(claim.Name, claim.AccessValues));
                 } 
             });

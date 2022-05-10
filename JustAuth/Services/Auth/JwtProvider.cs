@@ -12,11 +12,14 @@ namespace JustAuth.Services.Auth
         }
         public string GenerateJwt(AppUser user) {
             var now = DateTime.UtcNow;
-            var claims = new Claim[3] { 
+            var claims = new List<Claim>() { 
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username), 
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim("verified", user.IsEmailVerified.ToString()) 
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString())
                 };
+            foreach (var c in _options.Claims)
+            {
+                claims.Add(new Claim(c.Name, user.GetType().GetProperty(c.ModelProperty).GetValue(user).ToString())); 
+            }
             var jwt = new JwtSecurityToken(
                     issuer: _options.Issuer,
                     audience: _options.Audience,
