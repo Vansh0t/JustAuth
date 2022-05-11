@@ -54,9 +54,9 @@ namespace JustAuth.Services.Auth
                 return ServiceResult<TUser>.FailInternal();
             }
         }
-    public async Task<IServiceResult<TUser>> GetUserAsync(string username) {
+    public async Task<IServiceResult<TUser>> GetUserAsync(string emailOrUsername) {
             try {
-                var user = await _context.Users.FirstOrDefaultAsync(_=>_.Username==username);
+                var user = await _context.Users.FirstOrDefaultAsync(_=>_.Username==emailOrUsername||_.Email == emailOrUsername);
                 return ServiceResult<TUser>.FromResultObject(user, nullCaseError: "Requested user does not exist");
             }
             catch (Exception e) {
@@ -87,11 +87,11 @@ namespace JustAuth.Services.Auth
             //validation
             if (!user.IsEmailVerified) 
                 return ServiceResult.Fail(403, "Verify your current email before changing password.");
-            var token = Cryptography.GetGuidToken();
+            var token = Cryptography.GetRandomToken();
             //Make sure we never have dublicates
             //Guid chances are VERY small but still
             while (await _context.Users.AnyAsync(_=>_.PasswordResetToken == token)) {
-                token = Cryptography.GetGuidToken();
+                token = Cryptography.GetRandomToken();
             }
             //action
             user.PasswordResetToken = token;
@@ -104,13 +104,12 @@ namespace JustAuth.Services.Auth
         }
         
     }
-    public async Task<IServiceResult<TUser>> VerifyPasswordAsync(string token, string newPassword) {
+    public IServiceResult<TUser> VerifyPassword(TUser user, string token, string newPassword) {
         try {
-            TUser user = await _context.Users.FirstOrDefaultAsync(_=>_.PasswordResetToken==token);
             //validation
-            if(token is null || user is null)
+            if(token is null || user is null || user.PasswordResetToken != token)
                 return ServiceResult<TUser>.Fail(403, "Forbidden.");
-            if(DateTime.UtcNow > user.PasswordResetTokenExpiration)
+            if(DateTime.UtcNow > user.PasswordResetTokenExpiration )
                 return ServiceResult<TUser>.Fail(401, "Verification link has expired.");
             var result = SetPassword(user, newPassword);
             if(result.IsError) 
@@ -160,11 +159,10 @@ namespace JustAuth.Services.Auth
                 var available = await CheckEmailAvailableAsync(newEmail);
                 if(!available) 
                     return ServiceResult.Fail(409, "Email already occupied. Please, choose another.");
-                var token = Cryptography.GetGuidToken();
+                var token = Cryptography.GetRandomToken();
                 //Make sure we never have dublicates
-                //Guid chances are VERY small but still
                 while (await _context.Users.AnyAsync(_=>_.EmailVrfToken == token)) {
-                    token = Cryptography.GetGuidToken();
+                    token = Cryptography.GetRandomToken();
                 }
                 user.EmailVrfToken = token;
                 user.EmailVrfTokenExpiration = DateTime.UtcNow.AddHours(VERIFICATION_TOKENS_HOURS);
@@ -180,11 +178,11 @@ namespace JustAuth.Services.Auth
             try {
                 if(user.IsEmailVerified)
                     return ServiceResult.Fail(403, "Forbidden.");
-                var token = Cryptography.GetGuidToken();
+                var token = Cryptography.GetRandomToken();
                 //Make sure we never have dublicates
                 //Guid chances are VERY small but still
                 while (await _context.Users.AnyAsync(_=>_.EmailVrfToken == token)) {
-                    token = Cryptography.GetGuidToken();
+                    token = Cryptography.GetRandomToken();
                 }
                 user.IsEmailVerified = false;
                 user.EmailVrfToken = token;
@@ -203,8 +201,12 @@ namespace JustAuth.Services.Auth
                 return ServiceResult<TUser>.Fail(403, "Forbidden.");
             if(DateTime.UtcNow > user.EmailVrfTokenExpiration)
                 return ServiceResult<TUser>.Fail(401, "Verification link has expired.");
-            if(user.NewEmail is not null)
-                await SetEmailAsync(user, user.NewEmail);
+            if(user.NewEmail is not null) {
+                var result = await SetEmailAsync(user, user.NewEmail);
+                if(result.IsError)
+                    return ServiceResult<TUser>.Fail(result);
+            }
+                
             user.IsEmailVerified = true;
             ClearEmailVerification(user);
             return ServiceResult<TUser>.Success(user);

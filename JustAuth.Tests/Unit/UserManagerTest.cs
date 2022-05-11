@@ -181,7 +181,7 @@ namespace JustAuth.Tests.Unit {
                     PasswordResetTokenExpiration = DateTime.UtcNow.AddHours(hours)
                 } 
             );
-            var result = await _userManager.VerifyPasswordAsync(token, newPassword);
+            var result = _userManager.VerifyPassword(user, token, newPassword);
             Assert.Equal(code, result.Code);
         }
         [Fact]
@@ -199,7 +199,7 @@ namespace JustAuth.Tests.Unit {
             Assert.Equal(200, result.Code);
             Assert.NotNull(user.PasswordResetToken);
             await _context.SaveChangesAsync();
-            var uResult = await _userManager.VerifyPasswordAsync(user.PasswordResetToken, "newvalidpwd111");
+            var uResult = _userManager.VerifyPassword(user, user.PasswordResetToken, "newvalidpwd111");
             Assert.Equal(200, uResult.Code);
             user = uResult.ResultObject;
             Assert.NotNull(user.PasswordHash);

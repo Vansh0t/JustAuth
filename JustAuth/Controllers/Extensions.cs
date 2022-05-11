@@ -1,6 +1,11 @@
 using System.Security.Claims;
+using JustAuth.Data;
 using JustAuth.Services;
+using JustAuth.Services.Emailing;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace JustAuth.Controllers
 {
@@ -23,7 +28,57 @@ namespace JustAuth.Controllers
             return $"{request.Scheme}://{request.Host.Value}";
         }
         public static int GetUserId(this ClaimsPrincipal user) {
-            return int.Parse(user.Claims.First(_=>_.Type=="Id").Value);
+            return int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier));
+        }
+        /// <summary>
+        /// Perform code within single transaction to revert db changes on errors.
+        /// </summary>
+        public static async Task<IServiceResult> UsingAtomicTransactionAsync<TDbContext>(
+            this TDbContext context, 
+            Func<IDbContextTransaction, Task<IServiceResult>> action)
+            where TDbContext: DbContext
+        {
+            try {
+                using var transaction = await context.Database.BeginTransactionAsync();
+                return await action(transaction);
+            }
+            catch {
+                return ServiceResult.FailInternal();
+            }
+        }
+        /// <summary>
+        /// Saves all changes to database only if email is sent successfully
+        /// </summary>
+        /// <typeparam name="TDbContext"></typeparam>
+        /// <returns></returns>
+        public static async Task<IServiceResult> EmailSafeAsync<TDbContext>(
+            this IEmailService service,
+            TDbContext context,
+            string email,
+            string htmlTemplate,
+            string actionData,
+            string subject
+            )
+            where TDbContext: DbContext
+         {
+            var emailResult = await context.UsingAtomicTransactionAsync(async (transaction)=>{
+                //prepare to save any previous operations
+                await context.SaveChangesAsync();
+                //Try send email
+                var emailResult = await service.SendEmailAsync(
+                    email, 
+                    htmlTemplate,
+                    actionData,
+                    subject
+                );
+                if(emailResult.IsError) {
+                    //On email sending error, don't commit
+                    return emailResult;
+                }
+                await transaction.CommitAsync();
+                return ServiceResult.Success();
+            });
+            return emailResult;
         }
         /// <summary>
         /// Shortcut for creating Dictionary<string,object>

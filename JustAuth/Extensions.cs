@@ -10,10 +10,11 @@ using System.Reflection;
 
 namespace JustAuth
 {
+    
     public class JustAuthOptions<TUser> where TUser: AppUser, new()
      {
         public JwtOptions JwtOptions {get;set;}
-
+        public MappingOptions MappingOptions = new();
         
 
         private readonly IServiceCollection services;
@@ -50,6 +51,12 @@ namespace JustAuth
         {
             services.AddSingleton<IJwtProvider, TJwtProvider>();
         }
+        public void UseEmailConfirmRedirect(string url) {
+            MappingOptions.EmailConfirmRedirectUrl = url;
+        }
+        public void UsePasswordResetRedirect(string url) {
+            MappingOptions.PasswordResetRedirectUrl = url;
+        }
     }
     public static class Extensions
     {
@@ -60,10 +67,6 @@ namespace JustAuth
             controllers.ConfigureApplicationPartManager(opt=>{
                 opt.FeatureProviders.Add(new AuthControllerFeatureProvider<TUser>());
             });
-            //controllers.AddNewtonsoftJson(opt=> {
-            //    opt.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-            //    opt.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-            //});
             JustAuthOptions<TUser> opt = new (services);
             options(opt);
             JwtOptions jwtOptions = opt.JwtOptions;
@@ -71,6 +74,9 @@ namespace JustAuth
             SetDefaultServices<TUser>(services);
             SetDefaultProviders(services);
             services.AddSingleton(jwtOptions);
+            if(opt.MappingOptions.PasswordResetRedirectUrl is null)
+                Console.WriteLine("WARNING. Redirect Url for password reset wasn't set. Configure it with UsePasswordResetRedirect(). Password reset functionality disabled!");
+            services.AddSingleton(opt.MappingOptions);
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                                 .AddJwtBearer(options =>
                                 {
@@ -112,18 +118,15 @@ namespace JustAuth
             //If services are not set, use default implementations
             if(!services.Any(_=>_.ServiceType == typeof(IUserManager<>))) {
                 services.AddScoped<IUserManager<TUser>, UserManager<TUser>>();
-                Console.WriteLine("Using default user manager");
             }
             if(!services.Any(_=>_.ServiceType == typeof(IEmailService))) {
                 services.AddScoped<IEmailService, EmailService>();
-                Console.WriteLine("Using default email service");
             }
         }
         private static void SetDefaultProviders(IServiceCollection services) {
             //If services are not set, use default implementations
             if(!services.Any(_=>_.ServiceType == typeof(IJwtProvider))) {
                 services.AddSingleton<IJwtProvider, JwtProvider>();
-                Console.WriteLine("Using default jwt provider");
             }
         }
     }

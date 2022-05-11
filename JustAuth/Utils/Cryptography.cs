@@ -10,6 +10,7 @@ namespace JustAuth.Utils
         const int HASH_SALT_LENGTH = 128/8;
         const int HASH_ITERATIONS = 10000;
         const int HASH_KEY_LENGTH = 256/8;
+        const int RANDOM_TOKEN_LENGTH = 64;
         public static string HashPassword(string password, byte[] salt = null) {
             if (salt is null)
                 salt = RandomNumberGenerator.GetBytes(HASH_SALT_LENGTH);
@@ -31,8 +32,12 @@ namespace JustAuth.Utils
             //byte[] pwdHash = bHash[HASH_SALT_LENGTH..];
             return doHash == hash;
         }
-        public static string GetGuidToken() {
-            return Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+        public static string GetRandomToken() {
+            var randomBytes = RandomNumberGenerator.GetBytes(RANDOM_TOKEN_LENGTH);
+
+            var base64 = Convert.ToBase64String(randomBytes, new() {});
+
+            return base64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
         }
         public static SymmetricSecurityKey GetJwtSigningKey(string seed) {
             byte[] b = Encoding.ASCII.GetBytes(seed);

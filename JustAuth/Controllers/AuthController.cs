@@ -19,20 +19,23 @@ namespace JustAuth.Controllers
         private readonly ILogger<AuthController<TUser>> _logger;
         private readonly IJwtProvider _jwt;
         private readonly AuthDbMain<TUser> _context;
-
+        private readonly MappingOptions _map;
         public AuthController(ILogger<AuthController<TUser>> logger,
                               IUserManager<TUser> userManager,
                               IEmailService emailing,
                               AuthDbMain<TUser> context,
-                              IJwtProvider jwt
+                              IJwtProvider jwt,
+                              MappingOptions map
         ) {
             _logger = logger;
             _userManager = userManager;
             _emailing = emailing;
             _context = context;
             _jwt = jwt;
+            _map = map;
         }
-        [HttpPost("signup")]
+#region  USER
+    [HttpPost("signup")]
         public async Task<IActionResult> SignUp(Dictionary<string,string> data) {
             string email, username, password, passwordConf;
 
@@ -48,33 +51,22 @@ namespace JustAuth.Controllers
             }
 
             if(password != passwordConf)
-                return BadRequest("Passwords don't match.");
+                return Conflict("Passwords don't match.");
+
             var userResult = await _userManager.CreateUserAsync(email, username, password);
             if(userResult.IsError)
                 return userResult.ToActionResult();
+
             var user = userResult.ResultObject;
             
-            using (var transaction = await _context.Database.BeginTransactionAsync()) {
-                var tGuid = Guid.NewGuid().ToString();
-                await transaction.CreateSavepointAsync(tGuid);
-                //Create user in database
-                await _context.SaveChangesAsync();
-                Console.WriteLine("TTT " + Request.PathBase);
-                //Try send email
-                var emailResult = await _emailing.SendEmailAsync(
-                    user.Email, 
-                    Path.Join("EmailTemplates", "EmailConfirm.html"),
-                    $"{Request.GetBaseUrl()}/auth/email/vrf?vrft={user.EmailVrfToken}",
-                    "EmailConfirmation"
-                );
-                if(emailResult.IsError) {
-                    //On email sending error, revert changes to db
-                    await transaction.RollbackToSavepointAsync(tGuid);
-                    return emailResult.ToActionResult();
-                }
-                await transaction.CommitAsync();
-                
-            }
+            var emailResult = await _emailing.EmailSafeAsync(_context,
+                                                            user.Email, 
+                                                            Path.Join("EmailTemplates", "EmailConfirm.html"),
+                                                            $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
+                                                            "EmailConfirmation");
+            if(emailResult.IsError)
+                return emailResult.ToActionResult();
+            
             return CreatedAtAction("SignUp", 
                 new DTO.SignInResponse {
                 User = new DTO.AppUserDTO (user),
@@ -92,13 +84,16 @@ namespace JustAuth.Controllers
                 _logger.LogWarning("Got SignIn request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
                 return BadRequest("Invalid signin data.");
             }
+
             var result = await _userManager.GetUserAsync(username);
-            Console.WriteLine(result.Error);
             if(result.IsError)
                 return result.ToActionResult();
+
             var user = result.ResultObject;
+
             if(!Cryptography.ValidatePasswordHash(user.PasswordHash, password))
                 return StatusCode(403, "Check your username/password and try again.");
+            
             return Ok(
                 new DTO.SignInResponse {
                     User = new DTO.AppUserDTO(user),
@@ -106,16 +101,49 @@ namespace JustAuth.Controllers
                 }
             );
         }
+#endregion
+#region EMAIL
         [HttpGet("email/vrf")]
-        public async Task<IActionResult> EmailVerifification(string vrft) {
+        public async Task<IActionResult> EmailVerification(string vrft) {
             if(vrft is null || vrft=="") {
-                _logger.LogWarning("Got EmailVerfification request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
-                return BadRequest("Invalid signin data.");
+                _logger.LogWarning("Got EmailVerification request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                return BadRequest();
             }
+
             var result = await _userManager.VerifyEmailAsync(vrft);
             if(result.IsError)
                 return result.ToActionResult();
+
             await _context.SaveChangesAsync();
+
+            return Ok();
+        }
+        [Authorize]
+        [HttpPost("email/revrf")]
+        public async Task<IActionResult> EmailReVerification() {
+
+            var uId = HttpContext.User.GetUserId();
+
+            _logger.LogInformation("User {uId} requested resend of verification email.", uId);
+
+            var userResult = await _userManager.GetUserAsync(uId);
+            if(userResult.IsError)
+                return userResult.ToActionResult();
+
+            var result = await _userManager.SetEmailVerificationAsync(userResult.ResultObject);
+            if(result.IsError)
+                return result.ToActionResult();
+            
+            var user = userResult.ResultObject;
+
+            var emailResult = await _emailing.EmailSafeAsync(_context,
+                                                            user.Email, 
+                                                            Path.Join("EmailTemplates", "EmailConfirm.html"),
+                                                            $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
+                                                            "EmailConfirmation");
+            if(emailResult.IsError)
+                return emailResult.ToActionResult();
+
             return Ok();
         }
         [Authorize("IsEmailVerified")]
@@ -129,39 +157,96 @@ namespace JustAuth.Controllers
                 _logger.LogWarning("Got EmailChange request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
                 return BadRequest("Invalid signin data.");
             }
+
             var id = HttpContext.User.GetUserId();
+
             var userResult = await _userManager.GetUserAsync(id);
             if(userResult.IsError)
                 return userResult.ToActionResult();
+
+            var user = userResult.ResultObject;
+
             var result = await _userManager.SetEmailChangeAsync(userResult.ResultObject, newEmail);
             if(result.IsError)
                 return result.ToActionResult();
-            await _context.SaveChangesAsync();
+            
+            var emailResult = await _emailing.EmailSafeAsync(_context,
+                                                            user.Email, 
+                                                            Path.Join("EmailTemplates", "EmailConfirm.html"),
+                                                            $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
+                                                            "EmailConfirmation");
+            if(emailResult.IsError)
+                return emailResult.ToActionResult();
+
+            //await _context.SaveChangesAsync();
             return Ok();
         }
+#endregion
+#region PASSWORD
+        [HttpPost("pwd/reset1")]
         public async Task<IActionResult> PasswordReset1(Dictionary<string, string> data) {
-            //CREATE METHOD TO GET USER BY USERNAME!!!
-            string email;
+            if(_map.PasswordResetRedirectUrl is null) return NotFound();
+            string credential;
             try {
-                email = data["email"];
+                credential = data["credential"];
             }
             catch {
                 _logger.LogWarning("Got PasswordReset1 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
                 return BadRequest("Invalid signin data.");
             }
-            var id = HttpContext.User.GetUserId();
-            var userResult = await _userManager.GetUserAsync(id);
+
+            var userResult = await _userManager.GetUserAsync(credential);
             if(userResult.IsError)
                 return userResult.ToActionResult();
-            var result = await _userManager.SetPasswordResetAsync(userResult.ResultObject);
+
+            var user = userResult.ResultObject;
+
+            var result = await _userManager.SetPasswordResetAsync(user);
             if(result.IsError)
-                return userResult.ToActionResult();
+                return result.ToActionResult();
+            
+            var emailResult = await _emailing.EmailSafeAsync(_context,
+                                                            user.Email, 
+                                                            Path.Join("EmailTemplates", "PasswordReset.html"),
+                                                            $"{Request.GetBaseUrl()}{_map.PasswordResetRedirectUrl}?rst={user.PasswordResetToken}",
+                                                            "PasswordReset");
+            if(emailResult.IsError)
+                return emailResult.ToActionResult();
             return Ok();
         }
+        [HttpPost("pwd/reset2")]
+        public async Task<IActionResult> PasswordReset2(Dictionary<string, string> data) {
+            if(_map.PasswordResetRedirectUrl is null) return NotFound();
+            string credential, token, newPassword, newPasswordConf;
+            try {
+                credential = data["credential"];
+                newPassword = data["newPassword"];
+                newPasswordConf = data["newPasswordConf"];
+                token = data["token"];
+            }
+            catch {
+                _logger.LogWarning("Got PasswordReset2 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                return BadRequest("Invalid signin data.");
+            }
+            
+            if(newPassword != newPasswordConf)
+                return Conflict("Passwords don't match.");
 
+            var userResult = await _userManager.GetUserAsync(credential);
+            if(userResult.IsError)
+                return userResult.ToActionResult();
 
+            var result = _userManager.VerifyPassword(userResult.ResultObject, token, newPassword);
+            if(result.IsError) {
+                return result.ToActionResult();
+            }
+                
 
-
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+#endregion
+        
         
     }
 }

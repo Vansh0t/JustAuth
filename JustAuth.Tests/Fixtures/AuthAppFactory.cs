@@ -8,19 +8,50 @@ using JustAuth.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.AspNetCore.Builder;
 using System;
+using System.Threading.Tasks;
 
 namespace JustAuth.Tests.Fixtures
 {
     public class AuthAppFactory:WebApplicationFactory<Program>
     {
         private const string ConnectionString = "Data Source=JustAuth.Tests.Integration.db;Cache=Shared";
-        public const string VERIFIED_USER_EMAIL = "act_verified@test.com";
-        public const string VERIFIED_USER_USERNAME = "act_verified";
-        public const string VERIFIED_USER_PASSWORD = "act_verified_pwd111";
-        public const string UNVERIFIED_USER_EMAIL = "act_unverified@test.com";
-        public const string UNVERIFIED_USER_USERNAME = "act_unverified";
+
         public const string UNVERIFIED_USER_PASSWORD = "act_unverified_pwd111";
-        public const string UNVERIFIED_USER_VRFT = "UNVRFT";
+        public const string VERIFIED_USER_PASSWORD = "act_verified_pwd111";
+        public const string EMAIL_CHANGE_USER_PASSWORD = "act_emailchange_pwd111";
+        public const string EMAIL_VERIFY_USER_PASSWORD = "act_emailverify_pwd111";
+        public const string PASSWORD_RESET_USER_PASSWORD = "act_pwdreset_pwd111";
+        public static readonly TestUser UNVERIFIED_USER = new () {
+                Email = "act_unverified@test.com",
+                Username = "act_unverified",
+                PasswordHash = Cryptography.HashPassword(UNVERIFIED_USER_PASSWORD),
+                EmailVrfToken = "UNVERIFIED_USER",
+                EmailVrfTokenExpiration = DateTime.UtcNow.AddHours(24)
+            };
+        public static readonly TestUser VERIFIED_USER = new () {
+                Email = "act_verified@test.com",
+                Username = "act_verified",
+                PasswordHash = Cryptography.HashPassword(VERIFIED_USER_PASSWORD),
+            };
+        public static readonly TestUser EMAIL_CHANGE_USER = new () {
+                Email = "act_emailchange@test.com",
+                Username = "act_emailchange",
+                PasswordHash = Cryptography.HashPassword(EMAIL_CHANGE_USER_PASSWORD),
+                IsEmailVerified = true
+            };
+        public static readonly TestUser EMAIL_VERIFY_USER = new () {
+                Email = "act_emailverify@test.com",
+                Username = "act_emailverify",
+                PasswordHash = Cryptography.HashPassword(EMAIL_VERIFY_USER_PASSWORD),
+                EmailVrfToken = "EMAIL_VERIFY_USER",
+                EmailVrfTokenExpiration = DateTime.UtcNow.AddHours(24)
+            };
+        public static readonly TestUser PASSWORD_RESET_USER = new () {
+                Email = "act_pwdreset@test.com",
+                Username = "act_pwdreset",
+                PasswordHash = Cryptography.HashPassword(PASSWORD_RESET_USER_PASSWORD),
+                IsEmailVerified = true
+            };
         private static bool isDbInitialized;
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
@@ -39,12 +70,12 @@ namespace JustAuth.Tests.Fixtures
                 config.GetSection("JwtOptions").Bind(jwtOptions);
                 services.AddJustAuth<TestUser>( opt=> {
                     opt.JwtOptions  = jwtOptions;
+                    opt.UsePasswordResetRedirect("DoesNotMatter");
                 });
                 InitDatabase(services);
             });
             
             builder.Configure(app=>{
-                Console.WriteLine("TTWADWAD");
                 app.UseHttpsRedirection();
                 app.UseStaticFiles();
                 app.UseRouting();
@@ -62,22 +93,21 @@ namespace JustAuth.Tests.Fixtures
             using var context = scope.ServiceProvider.GetRequiredService<AuthDbMain<TestUser>>();
             context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
-            TestUser verifiedUser = new () {
-                    Email = VERIFIED_USER_EMAIL,
-                    Username = VERIFIED_USER_USERNAME,
-                    PasswordHash = Cryptography.HashPassword(VERIFIED_USER_PASSWORD),
-                    IsEmailVerified = true
-                };
-            TestUser unverifiedUser = new () {
-                Email = UNVERIFIED_USER_EMAIL,
-                Username = UNVERIFIED_USER_USERNAME,
-                PasswordHash = Cryptography.HashPassword(UNVERIFIED_USER_PASSWORD),
-                EmailVrfToken = "UNVRFT",
-                EmailVrfTokenExpiration = DateTime.UtcNow.AddHours(24)
-            };
-            context.AddRange(verifiedUser, unverifiedUser);
+            Console.WriteLine("CREATED");
+
+            context.AddRange(UNVERIFIED_USER,
+                            VERIFIED_USER,
+                            EMAIL_CHANGE_USER,
+                            EMAIL_VERIFY_USER,
+                            PASSWORD_RESET_USER);
             context.SaveChanges();
             isDbInitialized = true;
+        }
+
+        public async Task UsingContext(Func<AuthDbMain<TestUser>, Task> action) {
+            using var scope = Services.CreateScope() ;
+            using var context = scope.ServiceProvider.GetRequiredService<AuthDbMain<TestUser>>();
+            await action(context);
         }
 
             

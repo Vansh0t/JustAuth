@@ -7,12 +7,12 @@ namespace JustAuth.Services.Auth
 #region USER
         Task<IServiceResult<TUser>> CreateUserAsync(string email, string username, string password);
         Task<IServiceResult<TUser>> GetUserAsync(int id);
-        Task<IServiceResult<TUser>> GetUserAsync(string username);
+        Task<IServiceResult<TUser>> GetUserAsync(string usernameOrPassword);
 #endregion
 #region  PASSWORD
         IServiceResult SetPassword(TUser user, string newPassword);
         Task<IServiceResult> SetPasswordResetAsync(TUser user);
-        Task<IServiceResult<TUser>> VerifyPasswordAsync(string token, string newPassword);
+        IServiceResult<TUser> VerifyPassword(TUser user, string token, string newPassword);
         void ClearPasswordReset(TUser user);
 #endregion
 #region EMAIL
