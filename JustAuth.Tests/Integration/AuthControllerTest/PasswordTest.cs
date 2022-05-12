@@ -35,7 +35,7 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
             appClient = app.CreateClient();
             var content = Utils.MakeStringContent("credential", AuthAppFactory.PASSWORD_RESET_USER.Username);
             string beforeEmail = null;
-            string email = Utils.GetNewUserEmail();
+            string email = SharedUtils.GetNewUserEmail();
             await app.UsingContext(async (ctx)=> {
                 var user = await ctx.Users.FirstAsync(_=>_.Username == AuthAppFactory.PASSWORD_RESET_USER.Username);
                 beforeEmail = user.Email;

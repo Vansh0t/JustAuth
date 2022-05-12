@@ -55,22 +55,19 @@ namespace JustAuth.Tests.Fixtures
         private static bool isDbInitialized;
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            ConfigurationBuilder configBuilder= new ();
-            configBuilder.AddJsonFile("appsettings.Development.json");
-            configBuilder.AddJsonFile("justauth.json");
-            IConfiguration config = configBuilder.Build();
-            builder.UseConfiguration(config);
+            //ConfigurationBuilder configBuilder= new ();
+            //configBuilder.AddJsonFile("appsettings.Development.json");
+            //configBuilder.AddJsonFile("justauth.json");
+            //IConfiguration config = configBuilder.Build();
+            //builder.UseConfiguration(config);
             builder.ConfigureServices(services =>
             {
                 var connectionString = ConnectionString;
-                services.AddDbContext<AuthDbMain<TestUser>>(opt=> {
+                services.AddDbContext<IAuthDbMain<TestUser>, AuthDbMain<TestUser>>(opt=> {
                     opt.UseSqlite(connectionString);
                 });
-                JwtOptions jwtOptions = new ();
-                config.GetSection("JwtOptions").Bind(jwtOptions);
                 services.AddJustAuth<TestUser>( opt=> {
-                    opt.JwtOptions  = jwtOptions;
-                    opt.UsePasswordResetRedirect("DoesNotMatter");
+                    opt.UsePasswordResetRedirect("/fake");
                 });
                 InitDatabase(services);
             });

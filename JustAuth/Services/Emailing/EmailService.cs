@@ -7,20 +7,19 @@ namespace JustAuth.Services.Emailing
 {
     public class EmailService:IEmailService
     {
-        public EmailingOptions EmailingOptions {get;}
+        private readonly EmailingOptions _options;
         protected readonly SmtpClient client;
 
         private readonly ILogger<EmailService> _logger;
-        public EmailService(IConfiguration config, ILogger<EmailService> logger) {
-            EmailingOptions = new EmailingOptions();
-            config.GetSection("Emailing").Bind(EmailingOptions);
+        public EmailService(ILogger<EmailService> logger, EmailingOptions options) {
+            _options = options;
             client = new SmtpClient();
             _logger = logger;
         }
 
         public async Task<IServiceResult> SendEmailAsync(string recipient, string message, string actionData, string subject) {
 
-            return await SendEmailAsync(recipient, message, actionData, subject, EmailingOptions);
+            return await SendEmailAsync(recipient, message, actionData, subject, _options);
         }
         public async Task<IServiceResult> SendEmailAsync(string recipient, string message, string actionData, string subject, EmailingOptions options) {
             ServiceResult result;
@@ -53,7 +52,7 @@ namespace JustAuth.Services.Emailing
             string msgHtml = await File.ReadAllTextAsync(messageTemplatePath);
             msgHtml = msgHtml.Replace("{{actionData}}", actionData);
             builder.HtmlBody = msgHtml;
-            mime.From.Add(new MailboxAddress(EmailingOptions.Service, EmailingOptions.Sender));
+            mime.From.Add(new MailboxAddress(_options.Service, _options.Sender));
             mime.To.Add(new MailboxAddress(recipient, recipient));
             mime.Subject = subject;
             mime.Body = builder.ToMessageBody();

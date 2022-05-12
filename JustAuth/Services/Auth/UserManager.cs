@@ -8,12 +8,12 @@ namespace JustAuth.Services.Auth
     public class UserManager<TUser>:IUserManager<TUser> where TUser: AppUser, new()
     {
         const int VERIFICATION_TOKENS_HOURS = 24;
-        private readonly AuthDbMain<TUser> _context;
+        private readonly IAuthDbMain<TUser> _context;
         private readonly ILogger<UserManager<TUser>> _logger;
         private readonly IEmailValidator _emailValidator;
         private readonly IPasswordValidator _pwdValidator;
         private readonly IUsernameValidator _uNameValidator;
-        public UserManager( AuthDbMain<TUser> context,
+        public UserManager( IAuthDbMain<TUser> context,
                             ILogger<UserManager<TUser>> logger,
                             IEmailValidator emailValidator,
                             IPasswordValidator pwdValidator,

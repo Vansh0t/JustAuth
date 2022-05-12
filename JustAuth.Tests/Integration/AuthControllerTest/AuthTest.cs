@@ -19,7 +19,7 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
         private const string NEW_USER_PASSWORD = "newuser_pwd111";
         public AuthTest(AuthAppFactory app) {
             this.app = app;
-            NEW_USER_EMAIL = Utils.GetNewUserEmail();
+            NEW_USER_EMAIL = SharedUtils.GetNewUserEmail();
         }
         [Fact]
          public async Task TestSignIn() {

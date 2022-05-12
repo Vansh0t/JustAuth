@@ -18,7 +18,7 @@ namespace JustAuth.Tests.Unit
         }
 
         [Fact]
-        public async Task TestSavepointsFail() {
+        public async Task TestUsingAtomicTransactionAsync() {
             var result = await _context.UsingAtomicTransactionAsync(
              async (transaction)=> {
                  var user = new AppUser {
@@ -26,13 +26,10 @@ namespace JustAuth.Tests.Unit
                     Username = "TestSavepointsFail",
                     PasswordHash = "adwfAWDAWDwFWFAWD=",
                 };
-                //await transaction.CreateSavepointAsync("TestSavepointsFail");
                 _context.Add(user);
                 await _context.SaveChangesAsync();
-                //await trans.CommitAsync();
                 user = await _context.Users.FirstOrDefaultAsync(_=>_.Email==user.Email);
-                //await transaction.RollbackToSavepointAsync("TestSavepointsFail");
-                //await transaction.CommitAsync();
+                await transaction.RollbackAsync();
                 return ServiceResult.Success();
             });
             var u = await _context.Users.FirstOrDefaultAsync(_=>_.Email=="TestSavepointsFail@test.com");

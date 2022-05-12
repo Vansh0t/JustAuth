@@ -13,7 +13,6 @@ namespace JustAuth
     
     public class JustAuthOptions<TUser> where TUser: AppUser, new()
      {
-        public JwtOptions JwtOptions {get;set;}
         public MappingOptions MappingOptions = new();
         
 
@@ -69,11 +68,20 @@ namespace JustAuth
             });
             JustAuthOptions<TUser> opt = new (services);
             options(opt);
-            JwtOptions jwtOptions = opt.JwtOptions;
+
+            ConfigurationBuilder configBuilder = new();
+            configBuilder.AddJsonFile("justauth.json");
+            IConfiguration config = configBuilder.Build();
+            JwtOptions jwtOptions = new();
+            EmailingOptions emailingOptions = new();
+            config.GetSection("JwtOptions").Bind(jwtOptions);
+            config.GetSection("Emailing").Bind(emailingOptions);
             SetDefaultValidators(services);
             SetDefaultServices<TUser>(services);
             SetDefaultProviders(services);
+            
             services.AddSingleton(jwtOptions);
+            services.AddSingleton(emailingOptions);
             if(opt.MappingOptions.PasswordResetRedirectUrl is null)
                 Console.WriteLine("WARNING. Redirect Url for password reset wasn't set. Configure it with UsePasswordResetRedirect(). Password reset functionality disabled!");
             services.AddSingleton(opt.MappingOptions);

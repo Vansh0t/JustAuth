@@ -18,7 +18,7 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
         private readonly string NEW_USER_EMAIL;
         public EmailTest(AuthAppFactory app) {
             this.app = app;
-            NEW_USER_EMAIL = Utils.GetNewUserEmail();
+            NEW_USER_EMAIL = SharedUtils.GetNewUserEmail();
         }
         [Fact]
         public async Task TestEmailVerification() {

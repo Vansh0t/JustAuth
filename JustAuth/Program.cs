@@ -14,7 +14,7 @@ using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 //var services = builder.Services;
-//builder.Configuration.AddJsonFile("justauth.json"); // private.json contains sensitive data, it is not stored on github
+//builder.Configuration.AddJsonFile("justauth.json"); // justauth.json contains sensitive data, it is not stored on github
 //var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 //services.AddDbContext<AuthDbMain<AppUser>>(opt=> {
 //    opt.UseSqlite(connectionString);

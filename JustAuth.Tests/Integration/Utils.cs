@@ -11,14 +11,7 @@ namespace JustAuth.Tests.Integration
 {
     public static class Utils
     {
-        public static string GetNewUserEmail() {
-            LoggerFactory factory = new ();
-            var logger = factory.CreateLogger<EmailService>();
-            ConfigurationBuilder confBuilder = new ();
-            confBuilder.AddJsonFile("justauth.json");
-            var config = confBuilder.Build();
-            return new EmailService(config, logger).EmailingOptions.Sender;
-        }
+        
         public static StringContent MakeStringContent(params string[] kvp) {
             if(kvp.Length == 0 || kvp.Length%2!=0) throw new ArgumentException("Invalid kvp length: " + kvp.Length);
             Dictionary<string, string> dict = new();

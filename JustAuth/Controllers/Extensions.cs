@@ -72,7 +72,8 @@ namespace JustAuth.Controllers
                     subject
                 );
                 if(emailResult.IsError) {
-                    //On email sending error, don't commit
+                    //On email sending error rollback
+                    await transaction.RollbackAsync();
                     return emailResult;
                 }
                 await transaction.CommitAsync();
