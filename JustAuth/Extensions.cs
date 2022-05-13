@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using JustAuth.Controllers;
 using System.Reflection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace JustAuth
 {
@@ -85,20 +86,33 @@ namespace JustAuth
             if(opt.MappingOptions.PasswordResetRedirectUrl is null)
                 Console.WriteLine("WARNING. Redirect Url for password reset wasn't set. Configure it with UsePasswordResetRedirect(). Password reset functionality disabled!");
             services.AddSingleton(opt.MappingOptions);
+            TokenValidationParameters tokenValidationParams = new() {
+                ValidateIssuer = jwtOptions.ValidateIssuer,
+                ValidIssuer = jwtOptions.Issuer,
+                ValidateAudience = jwtOptions.ValidateAudience,
+                ValidAudience = jwtOptions.Audience,
+                ValidateLifetime = jwtOptions.ValidateLifetime,
+                IssuerSigningKey = jwtOptions.GetSymmetricSecurityKey(),
+                ValidateIssuerSigningKey = jwtOptions.ValidateIssuerSigningKey,
+            };
+            services.AddSingleton(tokenValidationParams);
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                                 .AddJwtBearer(options =>
                                 {
                                     options.RequireHttpsMetadata = false;
-                                    options.TokenValidationParameters = new ()
-                                    {
-                                        ValidateIssuer = jwtOptions.ValidateIssuer,
-                                        ValidIssuer = jwtOptions.Issuer,
-                                        ValidateAudience = jwtOptions.ValidateAudience,
-                                        ValidAudience = jwtOptions.Audience,
-                                        ValidateLifetime = jwtOptions.ValidateLifetime,
-                                        IssuerSigningKey = jwtOptions.GetSymmetricSecurityKey(),
-                                        ValidateIssuerSigningKey = jwtOptions.ValidateIssuerSigningKey,
-                                    };
+
+                                    //If sending jwt as cookie override default getter
+                                    if(jwtOptions.SendAsCookie) {
+                                        options.Events = new() {
+                                            OnMessageReceived = context=>{
+                                            context.Token = context.Request.Cookies["jwt"];
+                                            return Task.CompletedTask;
+                                            }
+                                        };
+                                    }
+                                    
+
+                                    options.TokenValidationParameters = tokenValidationParams;
                                 });
             services.AddAuthorization(options=> {
                 foreach(var claim in jwtOptions.Claims) {

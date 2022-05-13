@@ -57,7 +57,16 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
             );
             result = await appClient.PostAsync("/auth/signin", signinContent);
             var resp = await result.Content.ReadFromJsonAsync<Controllers.DTO.SignInResponse>();
-            appClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {resp.Jwt}");
+            if(resp.Jwt is not null){
+                appClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {resp.Jwt}");
+            }  
+            else {
+                var jwtCookie = result.Headers.Single(_=>_.Key=="Set-Cookie").Value.First();
+                var cookieValue = jwtCookie.Remove(0, 4);//remove jwt=
+                appClient.DefaultRequestHeaders.Add("Authorization", 
+                                                    $"Bearer {cookieValue}");
+            }
+                
             result = await appClient.PostAsync("/auth/email/change", content);
             Assert.Equal(403, (int)result.StatusCode);
         }

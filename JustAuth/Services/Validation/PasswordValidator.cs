@@ -14,16 +14,16 @@ namespace JustAuth.Services.Validation
                 return ServiceResult.Fail(400, "Invalid password.");
             } 
             if(password.Length < MIN_LENGTH) {
-                errors.Add($"Minimum password length should be {MIN_LENGTH} characters.");
+                errors.Add($"Minimum password length must be {MIN_LENGTH} characters.");
             } 
             else if(password.Length>MAX_LENGTH) {
-                errors.Add($"Maximum password length should be {MAX_LENGTH} characters.");
+                errors.Add($"Maximum password length must be {MAX_LENGTH} characters.");
             }
             if(!Regex.IsMatch(password, DIGIT_REGEX)) {
-                errors.Add("Password should contain at least 1 digit.");
+                errors.Add("Password must contain at least 1 digit.");
             }
             if(!Regex.IsMatch(password, LETTER_REGEX)) {
-                errors.Add("Password should contain at least 1 letter.");
+                errors.Add("Password must contain at least 1 letter.");
             }
             if(errors.Count == 0) {
                 return ServiceResult.Success();

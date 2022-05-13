@@ -1,15 +1,11 @@
-using JustAuth.Data;
-using JustAuth.Services;
-using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Internal;
-using Microsoft.EntityFrameworkCore.Storage;
-
+using System.Reflection;
 namespace JustAuth.Controllers
 {
     public static class Utils
     {
-        
+        public static string GetEntryAssemblyPath() {
+            return Path.GetDirectoryName( Assembly.GetEntryAssembly().Location);
+        }
         
     }
 }

@@ -16,15 +16,13 @@ namespace JustAuth.Data
         public string Username {get;set;}
         [Required]
         public string PasswordHash {get;set;}
-        [MaxLength(36)]
         public string? EmailVrfToken {get;set;}
         public DateTime? EmailVrfTokenExpiration {get;set;}
         [EmailAddress]
         public string NewEmail {get;set;}
         public bool IsEmailVerified {get;set;}
-        [MaxLength(36)]
         public string? PasswordResetToken {get;set;}
         public DateTime? PasswordResetTokenExpiration {get;set;}
-
+        public JwtRefreshToken JwtRefreshToken {get;set;}
     }
 }

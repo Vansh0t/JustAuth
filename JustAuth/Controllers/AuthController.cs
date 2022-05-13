@@ -1,3 +1,5 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using JustAuth.Data;
 using JustAuth.Services;
 using JustAuth.Services.Auth;
@@ -6,6 +8,7 @@ using JustAuth.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace JustAuth.Controllers
 {
@@ -23,14 +26,14 @@ namespace JustAuth.Controllers
         public AuthController(ILogger<AuthController<TUser>> logger,
                               IUserManager<TUser> userManager,
                               IEmailService emailing,
-                              AuthDbMain<TUser> context,
+                              IAuthDbMain<TUser> context,
                               IJwtProvider jwt,
                               MappingOptions map
         ) {
             _logger = logger;
             _userManager = userManager;
             _emailing = emailing;
-            _context = context;
+            _context = (AuthDbMain<TUser>)context;
             _jwt = jwt;
             _map = map;
         }
@@ -61,23 +64,29 @@ namespace JustAuth.Controllers
             
             var emailResult = await _emailing.EmailSafeAsync(_context,
                                                             user.Email, 
-                                                            Path.Join("EmailTemplates", "EmailConfirm.html"),
+                                                            Path.Join(Utils.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
             if(emailResult.IsError)
                 return emailResult.ToActionResult();
-            
+            var jwt = _jwt.GenerateJwt(user);
+            if(_jwt.Options.SendAsCookie)
+                HttpContext.Response.Cookies.Append("jwt", _jwt.GenerateJwt(user),
+                new CookieOptions{
+                    HttpOnly = true,
+                    MaxAge = TimeSpan.FromMinutes(_jwt.Options.TokenLifetime-1)//-1 minute to avoid clock conflict with frontend
+                });
             return CreatedAtAction("SignUp", 
                 new DTO.SignInResponse {
                 User = new DTO.AppUserDTO (user),
-                Jwt = _jwt.GenerateJwt(user)
+                Jwt = _jwt.Options.SendAsCookie ? null:jwt
             });
         }
         [HttpPost("signin")]
         public async Task<IActionResult> SignIn(Dictionary<string,string> data) {
-            string username, password;
+            string credential, password;
             try {
-                username = data["username"];
+                credential = data["credential"];
                 password = data["password"];
             }
             catch {
@@ -85,7 +94,7 @@ namespace JustAuth.Controllers
                 return BadRequest("Invalid signin data.");
             }
 
-            var result = await _userManager.GetUserAsync(username);
+            var result = await _userManager.GetUserAsync(credential);
             if(result.IsError)
                 return result.ToActionResult();
 
@@ -93,11 +102,19 @@ namespace JustAuth.Controllers
 
             if(!Cryptography.ValidatePasswordHash(user.PasswordHash, password))
                 return StatusCode(403, "Check your username/password and try again.");
-            
+                
+            var jwt = _jwt.GenerateJwt(user);
+            if(_jwt.Options.SendAsCookie)
+                HttpContext.Response.Cookies.Append("jwt", _jwt.GenerateJwt(user),
+                new CookieOptions{
+                    HttpOnly = true,
+                    MaxAge = TimeSpan.FromMinutes(_jwt.Options.TokenLifetime-1)//-1 minute to avoid clock conflict with frontend
+                }
+                );
             return Ok(
                 new DTO.SignInResponse {
                     User = new DTO.AppUserDTO(user),
-                    Jwt = _jwt.GenerateJwt(user)
+                    Jwt = _jwt.Options.SendAsCookie ? null:jwt
                 }
             );
         }
@@ -135,10 +152,9 @@ namespace JustAuth.Controllers
                 return result.ToActionResult();
             
             var user = userResult.ResultObject;
-
             var emailResult = await _emailing.EmailSafeAsync(_context,
                                                             user.Email, 
-                                                            Path.Join("EmailTemplates", "EmailConfirm.html"),
+                                                            Path.Join(Utils.GetEntryAssemblyPath(), "EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
             if(emailResult.IsError)
@@ -172,7 +188,7 @@ namespace JustAuth.Controllers
             
             var emailResult = await _emailing.EmailSafeAsync(_context,
                                                             user.Email, 
-                                                            Path.Join("EmailTemplates", "EmailConfirm.html"),
+                                                            Path.Join(Utils.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
             if(emailResult.IsError)
@@ -207,7 +223,7 @@ namespace JustAuth.Controllers
             
             var emailResult = await _emailing.EmailSafeAsync(_context,
                                                             user.Email, 
-                                                            Path.Join("EmailTemplates", "PasswordReset.html"),
+                                                            Path.Join(Utils.GetEntryAssemblyPath(),"EmailTemplates", "PasswordReset.html"),
                                                             $"{Request.GetBaseUrl()}{_map.PasswordResetRedirectUrl}?rst={user.PasswordResetToken}",
                                                             "PasswordReset");
             if(emailResult.IsError)
@@ -246,7 +262,35 @@ namespace JustAuth.Controllers
             return Ok();
         }
 #endregion
-        
+        #region JWT
+        [HttpPost("jwt/refresh")]
+        public async Task<IActionResult> RefreshJwt(Dictionary<string,string> data) {
+            string refreshToken;
+            try {
+                refreshToken = data["refreshToken"];
+            }
+            catch {
+                _logger.LogWarning("Got RefreshJwt request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                return BadRequest("Invalid signin data.");
+            }
+            return Ok();
+            //var userId = token.Header.
+            //var jwt = _jwt.GenerateJwt(user);
+            //if(_jwt.Options.SendAsCookie)
+            //    HttpContext.Response.Cookies.Append("jwt", _jwt.GenerateJwt(user),
+            //    new CookieOptions{
+            //        HttpOnly = true,
+            //        MaxAge = TimeSpan.FromMinutes(_jwt.Options.TokenLifetime-1)//-1 minute to avoid clock conflict with frontend
+            //    }
+            //    );
+            //return Ok(
+            //    new DTO.SignInResponse {
+            //        User = new DTO.AppUserDTO(user),
+            //        Jwt = _jwt.Options.SendAsCookie ? null:jwt
+            //    }
+            //);
+        }
+        #endregion
         
     }
 }
