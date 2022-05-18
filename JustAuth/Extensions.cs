@@ -85,6 +85,8 @@ namespace JustAuth
             services.AddSingleton(emailingOptions);
             if(opt.MappingOptions.PasswordResetRedirectUrl is null)
                 Console.WriteLine("WARNING. Redirect Url for password reset wasn't set. Configure it with UsePasswordResetRedirect(). Password reset functionality disabled!");
+            if(opt.MappingOptions.EmailConfirmRedirectUrl is null)
+                Console.WriteLine("WARNING. Redirect Url for email confirmation wasn't set. Configure it with UseEmailConfirmRedirect(). Email verification functionality disabled!");
             services.AddSingleton(opt.MappingOptions);
             TokenValidationParameters tokenValidationParams = new() {
                 ValidateIssuer = jwtOptions.ValidateIssuer,
@@ -100,7 +102,6 @@ namespace JustAuth
                                 .AddJwtBearer(options =>
                                 {
                                     options.RequireHttpsMetadata = false;
-
                                     //If sending jwt as cookie override default getter
                                     if(jwtOptions.SendAsCookie) {
                                         options.Events = new() {
@@ -110,15 +111,14 @@ namespace JustAuth
                                             }
                                         };
                                     }
-                                    
-
                                     options.TokenValidationParameters = tokenValidationParams;
                                 });
             services.AddAuthorization(options=> {
-                foreach(var claim in jwtOptions.Claims) {
-                    Console.WriteLine($"{claim.Name}, {claim.AccessValues}");
-                    options.AddPolicy(claim.Name, policy=>policy.RequireClaim(claim.Name, claim.AccessValues));
-                } 
+                options.AddPolicy("IsEmailVerified", policy=>policy.RequireClaim("IsEmailVerified", "true", "True"));
+                if(jwtOptions.Claims is not null)
+                    foreach(var claim in jwtOptions.Claims) {
+                        options.AddPolicy(claim.Name, policy=>policy.RequireClaim(claim.Name, claim.AccessValues));
+                    }
             });
             return services;
         }

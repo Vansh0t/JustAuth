@@ -1,4 +1,6 @@
 using System.Reflection;
+using Microsoft.AspNetCore.Mvc;
+
 namespace JustAuth.Controllers
 {
     public static class Utils
@@ -6,6 +8,5 @@ namespace JustAuth.Controllers
         public static string GetEntryAssemblyPath() {
             return Path.GetDirectoryName( Assembly.GetEntryAssembly().Location);
         }
-        
     }
 }

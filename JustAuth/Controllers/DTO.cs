@@ -8,6 +8,7 @@ namespace JustAuth.Controllers
         public class SignInResponse {
             public AppUserDTO User {get;set;}
             public string Jwt {get;set;}
+            public string RefreshJwt{get;set;}
         }
         public class AppUserDTO {
             public int Id {get;set;}

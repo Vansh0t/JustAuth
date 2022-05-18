@@ -8,5 +8,9 @@ namespace JustAuth.Data
         public DateTime? ExpiresAt{get;set;}
         public int UserId {get;set;}
         public AppUser User {get;set;}
+
+        public bool IsExpired() {
+            return DateTime.UtcNow>ExpiresAt;
+        }
     }
 }

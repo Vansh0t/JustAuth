@@ -46,7 +46,7 @@ namespace JustAuth.Services.Auth
         }
     public async Task<IServiceResult<TUser>> GetUserAsync(int id) {
             try {
-                var user = await _context.Users.FirstOrDefaultAsync(_=>_.Id==id);
+                var user = await _context.Users.Include(_=>_.JwtRefreshToken).FirstOrDefaultAsync(_=>_.Id==id);
                 return ServiceResult<TUser>.FromResultObject(user, nullCaseError: "Requested user does not exist");
             }
             catch (Exception e) {
@@ -56,7 +56,7 @@ namespace JustAuth.Services.Auth
         }
     public async Task<IServiceResult<TUser>> GetUserAsync(string emailOrUsername) {
             try {
-                var user = await _context.Users.FirstOrDefaultAsync(_=>_.Username==emailOrUsername||_.Email == emailOrUsername);
+                var user = await _context.Users.Include(_=>_.JwtRefreshToken).FirstOrDefaultAsync(_=>_.Username==emailOrUsername||_.Email == emailOrUsername);
                 return ServiceResult<TUser>.FromResultObject(user, nullCaseError: "Requested user does not exist");
             }
             catch (Exception e) {

@@ -13,6 +13,8 @@ namespace JustAuth.Services.Auth
         public string IssuerSigningKey {get;set;}
         public bool ValidateIssuerSigningKey {get;set;}
         public int TokenLifetime {get;set;}
+        public bool UseRefreshToken{get;set;}
+        public int RefreshTokenLifetime {get;set;}
         public bool SendAsCookie {get;set;}
         public IEnumerable<JwtClaim> Claims {get;set;}
 

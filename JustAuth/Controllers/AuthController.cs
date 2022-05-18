@@ -17,6 +17,8 @@ namespace JustAuth.Controllers
     [Route("auth")]
     public class AuthController<TUser>:ControllerBase where TUser:AppUser, new()
     {
+        
+        
         private readonly IUserManager<TUser> _userManager;
         private readonly IEmailService _emailing;
         private readonly ILogger<AuthController<TUser>> _logger;
@@ -69,18 +71,15 @@ namespace JustAuth.Controllers
                                                             "EmailConfirmation");
             if(emailResult.IsError)
                 return emailResult.ToActionResult();
-            var jwt = _jwt.GenerateJwt(user);
-            if(_jwt.Options.SendAsCookie)
-                HttpContext.Response.Cookies.Append("jwt", _jwt.GenerateJwt(user),
-                new CookieOptions{
-                    HttpOnly = true,
-                    MaxAge = TimeSpan.FromMinutes(_jwt.Options.TokenLifetime-1)//-1 minute to avoid clock conflict with frontend
-                });
-            return CreatedAtAction("SignUp", 
-                new DTO.SignInResponse {
-                User = new DTO.AppUserDTO (user),
-                Jwt = _jwt.Options.SendAsCookie ? null:jwt
-            });
+            
+            var response = new DTO.SignInResponse{
+                User = new DTO.AppUserDTO(user),
+                Jwt = _jwt.ResolveJwt(user, HttpContext),
+                RefreshJwt = _jwt.ResolveRefreshJwt(user, HttpContext)
+            };
+            
+            await _context.SaveChangesAsync(); //apply token changes
+            return CreatedAtAction("SignUp", response);
         }
         [HttpPost("signin")]
         public async Task<IActionResult> SignIn(Dictionary<string,string> data) {
@@ -102,41 +101,41 @@ namespace JustAuth.Controllers
 
             if(!Cryptography.ValidatePasswordHash(user.PasswordHash, password))
                 return StatusCode(403, "Check your username/password and try again.");
-                
-            var jwt = _jwt.GenerateJwt(user);
-            if(_jwt.Options.SendAsCookie)
-                HttpContext.Response.Cookies.Append("jwt", _jwt.GenerateJwt(user),
-                new CookieOptions{
-                    HttpOnly = true,
-                    MaxAge = TimeSpan.FromMinutes(_jwt.Options.TokenLifetime-1)//-1 minute to avoid clock conflict with frontend
-                }
-                );
-            return Ok(
-                new DTO.SignInResponse {
-                    User = new DTO.AppUserDTO(user),
-                    Jwt = _jwt.Options.SendAsCookie ? null:jwt
-                }
-            );
+            
+            var response = new DTO.SignInResponse{
+                User = new DTO.AppUserDTO(user),
+                Jwt = _jwt.ResolveJwt(user, HttpContext),
+                RefreshJwt = _jwt.ResolveRefreshJwt(user, HttpContext)
+            };
+            await _context.SaveChangesAsync();
+
+            return Ok(response);
         }
 #endregion
 #region EMAIL
-        [HttpGet("email/vrf")]
-        public async Task<IActionResult> EmailVerification(string vrft) {
-            if(vrft is null || vrft=="") {
+        [HttpPost("email/vrf")]
+        public async Task<IActionResult> EmailVerification(Dictionary<string, string> data) {
+            if(!data.TryGetValue("token", out string token) || token is null || token=="") {
                 _logger.LogWarning("Got EmailVerification request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
                 return BadRequest();
             }
 
-            var result = await _userManager.VerifyEmailAsync(vrft);
+            var result = await _userManager.VerifyEmailAsync(token);
             if(result.IsError)
                 return result.ToActionResult();
 
             await _context.SaveChangesAsync();
 
-            return Ok();
+            var user = result.ResultObject;
+            //update user's jwt so we have verified status updated
+            return Ok(
+                new {
+                    Jwt = _jwt.ResolveJwt(user, HttpContext)
+                }
+            );
         }
         [Authorize]
-        [HttpPost("email/revrf")]
+        [HttpGet("email/revrf")]
         public async Task<IActionResult> EmailReVerification() {
 
             var uId = HttpContext.User.GetUserId();
@@ -160,7 +159,7 @@ namespace JustAuth.Controllers
             if(emailResult.IsError)
                 return emailResult.ToActionResult();
 
-            return Ok();
+            return Redirect("/");
         }
         [Authorize("IsEmailVerified")]
         [HttpPost("email/change")]
@@ -263,32 +262,41 @@ namespace JustAuth.Controllers
         }
 #endregion
         #region JWT
-        [HttpPost("jwt/refresh")]
+        [HttpPost(Const.REFRESH_JWT_PATH)]
         public async Task<IActionResult> RefreshJwt(Dictionary<string,string> data) {
-            string refreshToken;
+            string accessToken, refreshToken;
             try {
-                refreshToken = data["refreshToken"];
+                if(_jwt.Options.SendAsCookie) {
+                    accessToken = HttpContext.Request.Cookies[Const.JWT_COOKIE_NAME];
+                    refreshToken = HttpContext.Request.Cookies[Const.REFRESH_JWT_COOKIE_NAME];
+                } 
+                else {
+                    accessToken = data["accessToken"];
+                    refreshToken = data["refreshToken"];
+                }
+                    
             }
             catch {
                 _logger.LogWarning("Got RefreshJwt request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
-                return BadRequest("Invalid signin data.");
+                return BadRequest("Invalid token data.");
             }
-            return Ok();
-            //var userId = token.Header.
-            //var jwt = _jwt.GenerateJwt(user);
-            //if(_jwt.Options.SendAsCookie)
-            //    HttpContext.Response.Cookies.Append("jwt", _jwt.GenerateJwt(user),
-            //    new CookieOptions{
-            //        HttpOnly = true,
-            //        MaxAge = TimeSpan.FromMinutes(_jwt.Options.TokenLifetime-1)//-1 minute to avoid clock conflict with frontend
-            //    }
-            //    );
-            //return Ok(
-            //    new DTO.SignInResponse {
-            //        User = new DTO.AppUserDTO(user),
-            //        Jwt = _jwt.Options.SendAsCookie ? null:jwt
-            //    }
-            //);
+            (var claims, var secToken) = _jwt.ParseJwt(accessToken, false);
+            if(claims is null)
+                return StatusCode(403);
+            var userId = claims.GetUserId();
+
+            //check if token was revoked
+            var dbRefreshToken = await _context.RefreshTokens.Include(_=>_.User).FirstOrDefaultAsync(_=>_.UserId==userId);
+            //check with token from db
+            if(dbRefreshToken is null || dbRefreshToken.IsExpired() || dbRefreshToken.Token != refreshToken)
+                return StatusCode(403);
+            var user = dbRefreshToken.User;
+            var response = _jwt.ResolveJwt(user, HttpContext);
+            return Ok(
+                new {
+                    Jwt = response
+                }
+            );
         }
         #endregion
         

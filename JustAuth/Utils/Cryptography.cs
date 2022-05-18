@@ -39,6 +39,7 @@ namespace JustAuth.Utils
 
             return base64.TrimEnd('=').Replace('+', '-').Replace('/', '_');
         }
+        
         public static SymmetricSecurityKey GetJwtSigningKey(string seed) {
             byte[] b = Encoding.ASCII.GetBytes(seed);
             return new SymmetricSecurityKey(b);

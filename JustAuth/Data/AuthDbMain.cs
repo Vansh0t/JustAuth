@@ -4,6 +4,7 @@ namespace JustAuth.Data
     public class AuthDbMain<TUser>:DbContext, IAuthDbMain<TUser> where TUser : AppUser
     {
         public DbSet<TUser> Users {get;set;}
+        public DbSet<JwtRefreshToken> RefreshTokens {get;set;}
         public AuthDbMain(DbContextOptions options) : base(options) {
 
         }

@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using JustAuth.Data;
 using JustAuth.Services;
+using JustAuth.Services.Auth;
 using JustAuth.Services.Emailing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +12,7 @@ namespace JustAuth.Controllers
 {
     public static class Extensions
     {
+        
         public static IActionResult ToActionResult(this IServiceResult serviceResult) {
             IActionResult aResult = new ObjectResult(serviceResult.Error) {
                 StatusCode = serviceResult.Code
@@ -32,6 +34,9 @@ namespace JustAuth.Controllers
         }
         public static string GetUserName(this ClaimsPrincipal user) {
             return user.FindFirstValue(ClaimTypes.Name);
+        }
+        public static string GetRefreshClaim(this ClaimsPrincipal user) {
+            return user.FindFirstValue("IsRefreshToken");
         }
         /// <summary>
         /// Perform code within single transaction to revert db changes on errors.
@@ -84,17 +89,57 @@ namespace JustAuth.Controllers
             return emailResult;
         }
         /// <summary>
-        /// Shortcut for creating Dictionary<string,object>
+        /// Get refresh jwt for user or sets it to cookie
         /// </summary>
-        /// <param name="kvp">Array of string in order ["key", "value", "key", "value", ...]</param>
-        //public static Dictionary<string, object> Dict(params object[] kvp) {
-        //    if(kvp.Length == 0 || kvp.Length % 2 != 0) 
-        //        throw new ArgumentException("Invalid kvp length " + kvp.Length);
-        //    var output = new Dictionary<string, string>();
-        //    for (int i = 0; i < kvp.Length; i+=2) {
-        //        output.Add((string)kvp[i], kvp[i+1]);
-        //    }
-        //    return output;
-        //}
+        /// <returns>refresh jwt or null if SendAsCookie = true</returns>
+        public static string ResolveRefreshJwt(this IJwtProvider jwtProvider, AppUser user, HttpContext httpContext) {
+            if(jwtProvider.Options.UseRefreshToken) {
+                string refreshJwt;
+                int expiration = jwtProvider.Options.RefreshTokenLifetime;
+                if(user.JwtRefreshToken is null || user.JwtRefreshToken.IsExpired()) {
+                    refreshJwt = jwtProvider.GenerateJwtRefresh();
+                    user.JwtRefreshToken = new JwtRefreshToken {
+                        Token = refreshJwt,
+                        ExpiresAt = DateTime.UtcNow.AddMinutes(expiration),
+                        IssuedAt = DateTime.UtcNow
+                    };
+                }
+                else
+                    refreshJwt = user.JwtRefreshToken.Token;
+                if(jwtProvider.Options.SendAsCookie) {
+                    httpContext.Response.Cookies.Append(Const.REFRESH_JWT_COOKIE_NAME, refreshJwt,
+                    new CookieOptions{
+                        HttpOnly = true,
+                        MaxAge = TimeSpan.FromMinutes(expiration),
+                        Path = Const.REFRESH_JWT_PATH,
+                        SameSite = SameSiteMode.Strict,
+                        Secure = true
+
+                    });
+                    Console.WriteLine(httpContext.Response.Cookies);
+                    return null;
+                }
+                return refreshJwt;
+            }
+            return null;
+            
+        }
+        /// <summary>
+        /// Get jwt for user or sets it to cookie
+        /// </summary>
+        /// <returns>jwt or null if SendAsCookie = true</returns>
+        public static string ResolveJwt(this IJwtProvider jwtProvider, AppUser user, HttpContext httpContext) {
+            var jwt = jwtProvider.GenerateJwt(user);
+            if(jwtProvider.Options.SendAsCookie) {
+                httpContext.Response.Cookies.Append(Const.JWT_COOKIE_NAME, jwt,
+                new CookieOptions{
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                });
+                return null;
+            }
+            return jwt;
+        }
     }
 }
