@@ -96,7 +96,7 @@ namespace JustAuth.Controllers
                 return BadRequest("Invalid signin data.");
             }
 
-            var result = await _userManager.GetUserAsync(credential);
+            var result = await _userManager.GetUserByCredentialAsync(credential);
             if(result.IsError)
                 return result.ToActionResult();
 
@@ -232,16 +232,16 @@ namespace JustAuth.Controllers
         [HttpPost("pwd/reset1")]
         public async Task<IActionResult> PasswordReset1(Dictionary<string, string> data) {
             if(_map.PasswordResetRedirectUrl is null) return NotFound();
-            string credential;
+            string email;
             try {
-                credential = data["credential"];
+                email = data["email"];
             }
             catch {
                 _logger.LogWarning("Got PasswordReset1 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
                 return BadRequest("Invalid signin data.");
             }
 
-            var userResult = await _userManager.GetUserAsync(credential);
+            var userResult = await _userManager.GetUserByEmailAsync(email);
             if(userResult.IsError)
                 return userResult.ToActionResult();
 
@@ -263,22 +263,22 @@ namespace JustAuth.Controllers
         [HttpPost("pwd/reset2")]
         public async Task<IActionResult> PasswordReset2(Dictionary<string, string> data) {
             if(_map.PasswordResetRedirectUrl is null) return NotFound();
-            string credential, token, newPassword, newPasswordConf;
+            string email, token, newPassword, newPasswordConf;
             try {
-                credential = data["credential"];
+                email = data["email"];
                 newPassword = data["newPassword"];
                 newPasswordConf = data["newPasswordConf"];
                 token = data["token"];
             }
             catch {
                 _logger.LogWarning("Got PasswordReset2 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
-                return BadRequest("Invalid signin data.");
+                return BadRequest("Invalid data.");
             }
             
             if(newPassword != newPasswordConf)
                 return Conflict("Passwords don't match.");
 
-            var userResult = await _userManager.GetUserAsync(credential);
+            var userResult = await _userManager.GetUserByEmailAsync(email);
             if(userResult.IsError)
                 return userResult.ToActionResult();
 

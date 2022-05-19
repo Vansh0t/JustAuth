@@ -54,9 +54,9 @@ namespace JustAuth.Services.Auth
                 return ServiceResult<TUser>.FailInternal();
             }
         }
-    public async Task<IServiceResult<TUser>> GetUserAsync(string emailOrUsername) {
+    public async Task<IServiceResult<TUser>> GetUserByEmailAsync(string email) {
             try {
-                var user = await _context.Users.Include(_=>_.JwtRefreshToken).FirstOrDefaultAsync(_=>_.Username==emailOrUsername||_.Email == emailOrUsername);
+                var user = await _context.Users.Include(_=>_.JwtRefreshToken).FirstOrDefaultAsync(_=>_.Email==email);
                 return ServiceResult<TUser>.FromResultObject(user, nullCaseError: "Requested user does not exist");
             }
             catch (Exception e) {
@@ -65,6 +65,26 @@ namespace JustAuth.Services.Auth
             }
             
         }
+    public async Task<IServiceResult<TUser>> GetUserByUsernameAsync(string username) {
+        try {
+            var user = await _context.Users.Include(_=>_.JwtRefreshToken).FirstOrDefaultAsync(_=>_.Email==username);
+            return ServiceResult<TUser>.FromResultObject(user, nullCaseError: "Requested user does not exist");
+        }
+        catch (Exception e) {
+            _logger.LogError("{e}", e.ToString());
+            return ServiceResult<TUser>.FailInternal();
+        }
+    }
+    public async Task<IServiceResult<TUser>> GetUserByCredentialAsync(string credential) {
+        try {
+            var user = await _context.Users.Include(_=>_.JwtRefreshToken).FirstOrDefaultAsync(_=>_.Email==credential || _.Username==credential);
+            return ServiceResult<TUser>.FromResultObject(user, nullCaseError: "Requested user does not exist");
+        }
+        catch (Exception e) {
+            _logger.LogError("{e}", e.ToString());
+            return ServiceResult<TUser>.FailInternal();
+        }
+    }
 #endregion
 #region  PASSWORD
     public IServiceResult SetPassword(TUser user, string password) {
