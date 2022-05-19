@@ -74,7 +74,10 @@ namespace JustAuth.Controllers
             
             var response = new DTO.SignInResponse{
                 User = new DTO.AppUserDTO(user),
-                Jwt = _jwt.ResolveJwt(user, HttpContext),
+                Jwt = new() {
+                    Jwt = _jwt.ResolveJwt(user, HttpContext),
+                    Expiration = DateTime.UtcNow.AddMinutes(_jwt.Options.TokenLifetime).GetEpochMilliseconds()
+                },
                 RefreshJwt = _jwt.ResolveRefreshJwt(user, HttpContext)
             };
             
@@ -104,12 +107,35 @@ namespace JustAuth.Controllers
             
             var response = new DTO.SignInResponse{
                 User = new DTO.AppUserDTO(user),
-                Jwt = _jwt.ResolveJwt(user, HttpContext),
-                RefreshJwt = _jwt.ResolveRefreshJwt(user, HttpContext)
+                Jwt = new() {
+                    Jwt = _jwt.ResolveJwt(user, HttpContext),
+                    Expiration = DateTime.UtcNow.AddMinutes(_jwt.Options.TokenLifetime).GetEpochMilliseconds()
+                },    
+                RefreshJwt = _jwt.ResolveRefreshJwt(user, HttpContext),
+
             };
             await _context.SaveChangesAsync();
 
             return Ok(response);
+        }
+        [Authorize]
+        [HttpPost("signout")]
+        public new IActionResult SignOut() { 
+            if(!_jwt.Options.SendAsCookie) {
+                _logger.LogWarning("SignOut request not implemented, but was received. Host {host}", HttpContext.Request.Host.Value);
+                return StatusCode(404);
+            } 
+            HttpContext.Response.Cookies.Append(Const.JWT_COOKIE_NAME, "", new CookieOptions{
+                MaxAge = TimeSpan.FromDays(0),
+                Secure = true,
+                SameSite = SameSiteMode.Strict
+            });
+            HttpContext.Response.Cookies.Append(Const.REFRESH_JWT_COOKIE_NAME, "", new CookieOptions{
+                MaxAge = TimeSpan.FromDays(0),
+                Secure = true,
+                SameSite = SameSiteMode.Strict
+            });
+            return Ok();
         }
 #endregion
 #region EMAIL
@@ -129,8 +155,9 @@ namespace JustAuth.Controllers
             var user = result.ResultObject;
             //update user's jwt so we have verified status updated
             return Ok(
-                new {
-                    Jwt = _jwt.ResolveJwt(user, HttpContext)
+                new DTO.JwtDTO{
+                    Jwt = _jwt.ResolveJwt(user, HttpContext),
+                    Expiration = DateTime.UtcNow.AddMinutes(_jwt.Options.TokenLifetime).GetEpochMilliseconds()
                 }
             );
         }
@@ -164,9 +191,10 @@ namespace JustAuth.Controllers
         [Authorize("IsEmailVerified")]
         [HttpPost("email/change")]
         public async Task<IActionResult> EmailChange(Dictionary<string,string> data) {
-            string newEmail;
+            string newEmail, password;
             try {
                 newEmail = data["newEmail"];
+                password = data["password"];
             }
             catch {
                 _logger.LogWarning("Got EmailChange request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
@@ -180,6 +208,9 @@ namespace JustAuth.Controllers
                 return userResult.ToActionResult();
 
             var user = userResult.ResultObject;
+
+            if(!Cryptography.ValidatePasswordHash(user.PasswordHash, password))
+                return StatusCode(403, "Check your password and try again.");
 
             var result = await _userManager.SetEmailChangeAsync(userResult.ResultObject, newEmail);
             if(result.IsError)
@@ -293,8 +324,9 @@ namespace JustAuth.Controllers
             var user = dbRefreshToken.User;
             var response = _jwt.ResolveJwt(user, HttpContext);
             return Ok(
-                new {
-                    Jwt = response
+                new DTO.JwtDTO{
+                    Jwt = _jwt.ResolveJwt(user, HttpContext),
+                    Expiration = DateTime.UtcNow.AddMinutes(_jwt.Options.TokenLifetime).GetEpochMilliseconds()
                 }
             );
         }

@@ -141,5 +141,8 @@ namespace JustAuth.Controllers
             }
             return jwt;
         }
+        public static long GetEpochMilliseconds(this DateTime dt) {
+            return new DateTimeOffset(dt).ToUnixTimeMilliseconds();
+        }
     }
 }
