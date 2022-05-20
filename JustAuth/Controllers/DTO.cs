@@ -9,10 +9,16 @@ namespace JustAuth.Controllers
             public AppUserDTO User {get;set;}
             public JwtDTO Jwt {get;set;}
             public string RefreshJwt{get;set;}
+            public SignInResponse() {
+
+            }
         }
         public class JwtDTO {
             public string Jwt {get;set;}
             public long Expiration {get;set;}
+            public JwtDTO() {
+
+            }
         }
         public class AppUserDTO {
             public int Id {get;set;}

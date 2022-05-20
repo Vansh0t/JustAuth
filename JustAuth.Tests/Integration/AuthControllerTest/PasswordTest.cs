@@ -22,9 +22,6 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
     {
         private readonly AuthAppFactory app;
         private HttpClient appClient;
-        private readonly string NEW_USER_EMAIL;
-        private const string NEW_USER_USERNAME = "newuser";
-        private const string NEW_USER_PASSWORD = "newuser_pwd111";
         private const string NEW_PASSWORD = "somenewpassword111";
         public PasswordTest(AuthAppFactory app) {
             this.app = app;
@@ -33,19 +30,24 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
         [Fact]
         public async Task TestPasswordResetSuccess() {
             appClient = app.CreateClient();
-            var content = Utils.MakeStringContent("credential", AuthAppFactory.PASSWORD_RESET_USER.Username);
-            string beforeEmail = null;
+            //setup pwd reset step 1
             string email = SharedUtils.GetNewUserEmail();
+            var content = Utils.MakeStringContent(
+                "email", email
+                );
+            string beforeEmail = null;
             await app.UsingContext(async (ctx)=> {
                 var user = await ctx.Users.FirstAsync(_=>_.Username == AuthAppFactory.PASSWORD_RESET_USER.Username);
-                beforeEmail = user.Email;
+                beforeEmail = user.Email; //save email so it can be restored in cleanup
                 user.Email = email; // Temporarily set to loopback email so we won't have 409 in other tests
                 await ctx.SaveChangesAsync();
                 
             });
-            
+            //action step 1
             var result = await appClient.PostAsync("auth/pwd/reset1", content);
+            //assert step 1
             Assert.Equal(200, (int)result.StatusCode);
+            //setup step 2
             string beforePasswordHash = null;
             string token = null;
             await app.UsingContext(async (ctx)=> {
@@ -53,16 +55,17 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
                 beforePasswordHash = user.PasswordHash;
                 token = user.PasswordResetToken;
             });
-            
             content = Utils.MakeStringContent(
-                "credential", AuthAppFactory.PASSWORD_RESET_USER.Username,
+                "email", email,
                 "token", token,
                 "newPassword", NEW_PASSWORD,
                 "newPasswordConf", NEW_PASSWORD
             );
-
+            //action step 2 
             var result1 = await appClient.PostAsync("auth/pwd/reset2", content);
+            //assert step 2
             Assert.Equal(200, (int)result.StatusCode);
+            //cleanup
             await app.UsingContext(async (ctx)=> {
                 var user = await ctx.Users.FirstAsync(_=>_.Username == AuthAppFactory.PASSWORD_RESET_USER.Username);
                 Assert.NotEqual(user.PasswordHash, beforePasswordHash);

@@ -21,11 +21,23 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
             this.app = app;
             NEW_USER_EMAIL = SharedUtils.GetNewUserEmail();
         }
+        
         [Fact]
-         public async Task TestSignIn() {
+         public async Task TestSignInUsername() {
             appClient = app.CreateClient();
             Dictionary<string, string> data = new();
-            data.Add("username", AuthAppFactory.VERIFIED_USER.Username);
+            data.Add("credential", AuthAppFactory.VERIFIED_USER.Username);
+            data.Add("password", AuthAppFactory.VERIFIED_USER_PASSWORD);
+            var serialized = JsonConvert.SerializeObject(data);
+            var sContent = new StringContent(serialized, Encoding.UTF8, "application/json");
+            var result = await appClient.PostAsync("/auth/signin", sContent);
+            Assert.Equal(200, (int)result.StatusCode);
+        }
+        [Fact]
+        public async Task TestSignInEmail() {
+            appClient = app.CreateClient();
+            Dictionary<string, string> data = new();
+            data.Add("credential", AuthAppFactory.VERIFIED_USER.Email);
             data.Add("password", AuthAppFactory.VERIFIED_USER_PASSWORD);
             var serialized = JsonConvert.SerializeObject(data);
             var sContent = new StringContent(serialized, Encoding.UTF8, "application/json");

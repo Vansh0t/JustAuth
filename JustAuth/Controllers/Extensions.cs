@@ -12,13 +12,21 @@ namespace JustAuth.Controllers
 {
     public static class Extensions
     {
-        
+        /// <summary>
+        /// Get IAction result from IServiceResult with the same status code.
+        /// In case of an error, the error string is passed to IActionResult as a result object
+        /// </summary>
         public static IActionResult ToActionResult(this IServiceResult serviceResult) {
             IActionResult aResult = new ObjectResult(serviceResult.Error) {
                 StatusCode = serviceResult.Code
             };
             return aResult;
         }
+        /// <summary>
+        /// Get IAction result from IServiceResult<TObj> with the same status code.
+        /// In case of success the ResultObject is passed to IActionResult
+        /// In case of an error, the error string is passed to IActionResult as a result object
+        /// </summary>
         public static IActionResult ToActionResult<TObj>(this IServiceResult<TObj> serviceResult) {
             object obj = serviceResult.IsError?serviceResult.Error:serviceResult.ResultObject;
             IActionResult aResult = new ObjectResult(obj) {
@@ -39,7 +47,7 @@ namespace JustAuth.Controllers
             return user.FindFirstValue("IsRefreshToken");
         }
         /// <summary>
-        /// Perform code within single transaction to revert db changes on errors.
+        /// Perform code within single transaction with ability to revert db changes on errors.
         /// </summary>
         public static async Task<IServiceResult> UsingAtomicTransactionAsync<TDbContext>(
             this TDbContext context, 
@@ -59,7 +67,7 @@ namespace JustAuth.Controllers
         /// </summary>
         /// <typeparam name="TDbContext"></typeparam>
         /// <returns></returns>
-        public static async Task<IServiceResult> EmailSafeAsync(
+        public static async Task<IServiceResult> EmailSaveAsync(
             this IEmailService service,
             DbContext context,
             string email,
@@ -89,7 +97,7 @@ namespace JustAuth.Controllers
             return emailResult;
         }
         /// <summary>
-        /// Get refresh jwt for user or sets it to cookie
+        /// Get refresh jwt for user or set it to cookie
         /// </summary>
         /// <returns>refresh jwt or null if SendAsCookie = true</returns>
         public static string ResolveRefreshJwt(this IJwtProvider jwtProvider, AppUser user, HttpContext httpContext) {
@@ -125,7 +133,7 @@ namespace JustAuth.Controllers
             
         }
         /// <summary>
-        /// Get jwt for user or sets it to cookie
+        /// Get jwt for user or set it to cookie
         /// </summary>
         /// <returns>jwt or null if SendAsCookie = true</returns>
         public static string ResolveJwt(this IJwtProvider jwtProvider, AppUser user, HttpContext httpContext) {
@@ -143,6 +151,9 @@ namespace JustAuth.Controllers
         }
         public static long GetEpochMilliseconds(this DateTime dt) {
             return new DateTimeOffset(dt).ToUnixTimeMilliseconds();
+        }
+        public static string GetRequestIP(this HttpContext context) {
+           return context.Connection.RemoteIpAddress.ToString();
         }
     }
 }

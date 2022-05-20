@@ -6,7 +6,7 @@ using JustAuth.Services.Auth;
 using JustAuth.Services.Emailing;
 using JustAuth.Utils;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http.Extensions;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -51,7 +51,7 @@ namespace JustAuth.Controllers
                 passwordConf = data["passwordConf"];
             }
             catch {
-                _logger.LogWarning("Got SignUp request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest("Invalid signup data.");
             }
 
@@ -64,9 +64,9 @@ namespace JustAuth.Controllers
 
             var user = userResult.ResultObject;
             
-            var emailResult = await _emailing.EmailSafeAsync(_context,
+            var emailResult = await _emailing.EmailSaveAsync(_context,
                                                             user.Email, 
-                                                            Path.Join(Utils.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
+                                                            Path.Join(Location.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
             if(emailResult.IsError)
@@ -92,7 +92,7 @@ namespace JustAuth.Controllers
                 password = data["password"];
             }
             catch {
-                _logger.LogWarning("Got SignIn request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest("Invalid signin data.");
             }
 
@@ -122,7 +122,7 @@ namespace JustAuth.Controllers
         [HttpPost("signout")]
         public new IActionResult SignOut() { 
             if(!_jwt.Options.SendAsCookie) {
-                _logger.LogWarning("SignOut request not implemented, but was received. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return StatusCode(404);
             } 
             HttpContext.Response.Cookies.Append(Const.JWT_COOKIE_NAME, "", new CookieOptions{
@@ -142,7 +142,7 @@ namespace JustAuth.Controllers
         [HttpPost("email/vrf")]
         public async Task<IActionResult> EmailVerification(Dictionary<string, string> data) {
             if(!data.TryGetValue("token", out string token) || token is null || token=="") {
-                _logger.LogWarning("Got EmailVerification request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest();
             }
 
@@ -178,9 +178,9 @@ namespace JustAuth.Controllers
                 return result.ToActionResult();
             
             var user = userResult.ResultObject;
-            var emailResult = await _emailing.EmailSafeAsync(_context,
+            var emailResult = await _emailing.EmailSaveAsync(_context,
                                                             user.Email, 
-                                                            Path.Join(Utils.GetEntryAssemblyPath(), "EmailTemplates", "EmailConfirm.html"),
+                                                            Path.Join(Location.GetEntryAssemblyPath(), "EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
             if(emailResult.IsError)
@@ -197,7 +197,7 @@ namespace JustAuth.Controllers
                 password = data["password"];
             }
             catch {
-                _logger.LogWarning("Got EmailChange request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest("Invalid signin data.");
             }
 
@@ -216,9 +216,9 @@ namespace JustAuth.Controllers
             if(result.IsError)
                 return result.ToActionResult();
             
-            var emailResult = await _emailing.EmailSafeAsync(_context,
+            var emailResult = await _emailing.EmailSaveAsync(_context,
                                                             user.Email, 
-                                                            Path.Join(Utils.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
+                                                            Path.Join(Location.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
             if(emailResult.IsError)
@@ -237,7 +237,7 @@ namespace JustAuth.Controllers
                 email = data["email"];
             }
             catch {
-                _logger.LogWarning("Got PasswordReset1 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest("Invalid signin data.");
             }
 
@@ -251,9 +251,9 @@ namespace JustAuth.Controllers
             if(result.IsError)
                 return result.ToActionResult();
             
-            var emailResult = await _emailing.EmailSafeAsync(_context,
+            var emailResult = await _emailing.EmailSaveAsync(_context,
                                                             user.Email, 
-                                                            Path.Join(Utils.GetEntryAssemblyPath(),"EmailTemplates", "PasswordReset.html"),
+                                                            Path.Join(Location.GetEntryAssemblyPath(),"EmailTemplates", "PasswordReset.html"),
                                                             $"{Request.GetBaseUrl()}{_map.PasswordResetRedirectUrl}?rst={user.PasswordResetToken}",
                                                             "PasswordReset");
             if(emailResult.IsError)
@@ -271,7 +271,7 @@ namespace JustAuth.Controllers
                 token = data["token"];
             }
             catch {
-                _logger.LogWarning("Got PasswordReset2 request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest("Invalid data.");
             }
             
@@ -308,7 +308,7 @@ namespace JustAuth.Controllers
                     
             }
             catch {
-                _logger.LogWarning("Got RefreshJwt request with one of the fields empty. Host {host}", HttpContext.Request.Host.Value);
+                _logger.LogWarning("Got {action} request with one of the fields empty. Client - {host}", MethodBase.GetCurrentMethod().Name, HttpContext.GetRequestIP());
                 return BadRequest("Invalid token data.");
             }
             (var claims, var secToken) = _jwt.ParseJwt(accessToken, false);

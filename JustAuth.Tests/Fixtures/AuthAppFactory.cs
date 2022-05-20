@@ -67,7 +67,8 @@ namespace JustAuth.Tests.Fixtures
                     opt.UseSqlite(connectionString);
                 });
                 services.AddJustAuth<TestUser>( opt=> {
-                    opt.UsePasswordResetRedirect("/fake");
+                    opt.UsePasswordResetRedirect("/pwd/fake");
+                    opt.UseEmailConfirmRedirect("/email/fake");
                 });
                 InitDatabase(services);
             });
