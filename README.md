@@ -64,3 +64,21 @@ public class DbMain: AuthDbMain<ChatUser>
     }
 }
 ```
+5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs
+```C#
+    services.AddDbContext<IAuthDbMain<ChatUser>, DbMain>(options=>{
+        //your options
+    });
+    services.AddJustAuth<ChatUser>(options => {
+        options.UseEmailConfirmRedirect("/Auth/EmailConfirm"); //an endpoint to which user will be sent by email confirmation email message
+        options.UsePasswordResetRedirect("/Auth/PasswordReset"); //an endpoint to which user will be sent by password reset email message
+        //custom services implementations are also supported here
+    });
+    app.UseRouting();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.UseEndpoints(options=> {
+        options.MapDefaultControllerRoute();
+    });
+```
+6. Customize email templates in EmailTemplates root folder of your built app. You will find 2 mimimal templates for password reset and email confirmation there. You can customize them however you like, but keep ``{{actionData}}``. ``{{actionData}}`` will be replaced with email change or password reset url before sending to user email.
