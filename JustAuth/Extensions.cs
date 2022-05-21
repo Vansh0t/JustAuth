@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using JustAuth.Controllers;
 using System.Reflection;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace JustAuth
 {
@@ -124,32 +125,20 @@ namespace JustAuth
         }
         private static void SetDefaultValidators(IServiceCollection services) {
             //If services are not set, use default implementations
-            if(!services.Any(_=>_.ServiceType == typeof(IPasswordValidator))) {
-                services.AddTransient<IPasswordValidator, PasswordValidator>();
-            }
-            if(!services.Any(_=>_.ServiceType == typeof(IEmailValidator))) {
-                services.AddTransient<IEmailValidator, EmailValidator>();
-            }
-            if(!services.Any(_=>_.ServiceType == typeof(IUsernameValidator))) {
-                services.AddTransient<IUsernameValidator, UsernameValidator>();
-            }
+            services.TryAddTransient<IPasswordValidator, PasswordValidator>();
+            services.TryAddTransient<IEmailValidator, EmailValidator>();
+            services.TryAddTransient<IUsernameValidator, UsernameValidator>();
         }
         private static void SetDefaultServices<TUser>(IServiceCollection services)
             where TUser: AppUser, new()
          {
             //If services are not set, use default implementations
-            if(!services.Any(_=>_.ServiceType == typeof(IUserManager<>))) {
-                services.AddScoped<IUserManager<TUser>, UserManager<TUser>>();
-            }
-            if(!services.Any(_=>_.ServiceType == typeof(IEmailService))) {
-                services.AddScoped<IEmailService, EmailService>();
-            }
+            services.TryAddScoped<IUserManager<TUser>, UserManager<TUser>>();
+            services.TryAddScoped<IEmailService, EmailService>();
         }
         private static void SetDefaultProviders(IServiceCollection services) {
             //If services are not set, use default implementations
-            if(!services.Any(_=>_.ServiceType == typeof(IJwtProvider))) {
-                services.AddSingleton<IJwtProvider, JwtProvider>();
-            }
+            services.TryAddSingleton<IJwtProvider, JwtProvider>();
         }
     }
     public class AuthControllerFeatureProvider<TUser> : IApplicationFeatureProvider<ControllerFeature>
