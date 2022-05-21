@@ -64,7 +64,7 @@ public class DbMain: AuthDbMain<ChatUser>
     }
 }
 ```
-5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs
+5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs. Your EmailConfirmRedirect and PasswordResetRedirect endpoints should read token fron query string ('vrft' for email, 'rst' for password) and pass it with POST request to the corresponding [endpoint](https://github.com/Vansh0t/JustAuth/blob/master/REST.md#post-authemailvrf)
 ```C#
     services.AddDbContext<IAuthDbMain<ChatUser>, DbMain>(options=>{
         //your options
