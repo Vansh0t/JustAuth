@@ -53,7 +53,14 @@ public class DbMain: AuthDbMain<ChatUser>
         "TokenLifetime": 60,                                     --> token lifetime in minutes
         "UseRefreshToken": true,                                 --> enable refresh token functionality
         "RefreshTokenLifetime": 60000,                           --> refresh token lifetime in minutes
-        "SendAsCookie" : true                                    --> should tokens be sent in secure cookies, if false jwt will be sent as part of json response
+        "SendAsCookie" : true,                                   --> should tokens be sent in secure cookies, if false jwt will be sent as part of json response
+        "Claims": [
+            {
+                "Name": "MyPolicyName",            --> policy name to be used with [Authorize]
+                "ModelProperty": "MyUserProperty", --> name of a property of your user model, its value is included into jwt tokens
+                "AccessValues": ["true", "True"]   --> valid values for policy
+            }
+        ]
     }
 }
 ```
