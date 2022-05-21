@@ -82,6 +82,5 @@ public class DbMain: AuthDbMain<ChatUser>
     });
 ```
 6. Customize email templates in EmailTemplates root folder of your built app. You will find 2 mimimal templates for password reset and email confirmation there. You can customize them however you like, but keep ``{{actionData}}``. ``{{actionData}}`` will be replaced with email change or password reset url before sending to user email.
-
 ## REST Endpoints
-For REST endpoint see [REST Doc](https://github.com/Vansh0t/JustAuth/edit/master/REST.md)
+For REST endpoint see [REST Doc](https://github.com/Vansh0t/JustAuth/blob/master/REST.md)
