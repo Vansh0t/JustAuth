@@ -64,7 +64,7 @@ public class DbMain: AuthDbMain<ChatUser>
     }
 }
 ```
-5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs. Your EmailConfirmRedirect and PasswordResetRedirect endpoints should read token fron query string ('vrft' for email, 'rst' for password) and pass it with POST request to the corresponding [endpoint](https://github.com/Vansh0t/JustAuth/blob/master/REST.md#post-authemailvrf)
+5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs. Your EmailConfirmRedirect and PasswordResetRedirect endpoints should read token fron query string (``vrft`` for email, ``rst`` for password) and pass it with POST request to the corresponding [endpoint](https://github.com/Vansh0t/JustAuth/blob/master/REST.md#post-authemailvrf). You must set these waypoints with ``UseEmailConfirmRedirect`` and ``UsePasswordResetRedirect`` as shown below.
 ```C#
     services.AddDbContext<IAuthDbMain<ChatUser>, DbMain>(options=>{
         //your options
@@ -81,6 +81,18 @@ public class DbMain: AuthDbMain<ChatUser>
         options.MapDefaultControllerRoute();
     });
 ```
-6. Customize email templates in EmailTemplates root folder of your built app. You will find 2 mimimal templates for password reset and email confirmation there. You can customize them however you like, but keep ``{{actionData}}``. ``{{actionData}}`` will be replaced with email change or password reset url before sending to user email.
+6. Create ``EmailTemplates`` folder in your app. Create 2 files ``EmailConfirm.html`` and ``PasswordReset.html`` in it. These files will be sent to users for password reset and email change. You can customize their content however you like, but it must contain ``{{actionData}}``, which will be replaced with url. Examples of templates:
+```html
+<!doctype html>
+<html>
+    <p>Please, use the link to confirm your email: {{actionData}}</p>
+</html>
+```
+```html
+<!doctype html>
+<html>
+    <p>Please, use the link to reset your password: {{actionData}}</p>
+</html>
+```
 ## REST Endpoints
 For REST endpoints see [REST Doc](https://github.com/Vansh0t/JustAuth/blob/master/REST.md)
