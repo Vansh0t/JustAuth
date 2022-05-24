@@ -7,7 +7,7 @@ Simple, but customizable JWT auth library for .NET Core MVC. The main goal of th
 4. Custom validators support via dependency injection
 5. Email verification
 6. Email change
-7. Passowrd reset
+7. Password reset
 8. Secure password storage
 9. Silent sign in with jwt refresh token
 10. Email templates
