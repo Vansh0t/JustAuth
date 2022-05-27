@@ -124,7 +124,6 @@ namespace JustAuth.Controllers
                         Secure = true
 
                     });
-                    Console.WriteLine(httpContext.Response.Cookies);
                     return null;
                 }
                 return refreshJwt;
