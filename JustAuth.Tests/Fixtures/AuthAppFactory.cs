@@ -55,11 +55,6 @@ namespace JustAuth.Tests.Fixtures
         private static bool isDbInitialized;
         protected override void ConfigureWebHost(IWebHostBuilder builder)
         {
-            //ConfigurationBuilder configBuilder= new ();
-            //configBuilder.AddJsonFile("appsettings.Development.json");
-            //configBuilder.AddJsonFile("justauth.json");
-            //IConfiguration config = configBuilder.Build();
-            //builder.UseConfiguration(config);
             builder.ConfigureServices(services =>
             {
                 var connectionString = ConnectionString;
@@ -69,6 +64,9 @@ namespace JustAuth.Tests.Fixtures
                 services.AddJustAuth<TestUser>( opt=> {
                     opt.UsePasswordResetRedirect("/pwd/fake");
                     opt.UseEmailConfirmRedirect("/email/fake");
+                });
+                services.AddHttpsRedirection(opt=>{
+                    opt.HttpsPort = 443;
                 });
                 InitDatabase(services);
             });
@@ -91,7 +89,6 @@ namespace JustAuth.Tests.Fixtures
             using var context = scope.ServiceProvider.GetRequiredService<AuthDbMain<TestUser>>();
             context.Database.EnsureDeleted();
             context.Database.EnsureCreated();
-            Console.WriteLine("CREATED");
 
             context.AddRange(UNVERIFIED_USER,
                             VERIFIED_USER,

@@ -15,7 +15,6 @@ using System;
 namespace JustAuth.Tests.Unit {
     public class UserManagerTest: IClassFixture<DbContextFixture>
     {
-        private readonly IConfiguration _config;
         private readonly AuthDbMain<AppUser> _context;
         private readonly IUserManager<AppUser> _userManager;
 
@@ -25,7 +24,6 @@ namespace JustAuth.Tests.Unit {
             var logger = factory.CreateLogger<UserManager<AppUser>>();
             ConfigurationBuilder confBuilder = new ();
             confBuilder.AddJsonFile("justauth.json");
-            _config = confBuilder.Build();
             _context = ctxFixture.CreateMockContext();
             _userManager = new UserManager<AppUser>(_context, logger, new EmailValidator(), new PasswordValidator(), new UsernameValidator());
 

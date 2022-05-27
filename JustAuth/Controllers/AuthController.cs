@@ -217,7 +217,7 @@ namespace JustAuth.Controllers
                 return result.ToActionResult();
             
             var emailResult = await _emailing.EmailSaveAsync(_context,
-                                                            user.Email, 
+                                                            newEmail, 
                                                             Path.Join(Location.GetEntryAssemblyPath(),"EmailTemplates", "EmailConfirm.html"),
                                                             $"{Request.GetBaseUrl()}{_map.EmailConfirmRedirectUrl}?vrft={user.EmailVrfToken}",
                                                             "EmailConfirmation");
