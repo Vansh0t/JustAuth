@@ -12,7 +12,7 @@ Simple, but customizable JWT authentication and authorization library made with 
 9. Silent sign in with jwt refresh token
 10. Email templates
 ## Setup
-1. Add nuget to the project
+1. Add nuget to a project
 2. Create your User model and make sure it derives from ``AppUser``
 ```C#
 using JustAuth.Data;
