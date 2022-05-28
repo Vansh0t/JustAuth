@@ -1,7 +1,6 @@
 
 using MailKit.Net.Smtp;
 using MimeKit;
-using System.IO;
 
 namespace JustAuth.Services.Emailing
 {

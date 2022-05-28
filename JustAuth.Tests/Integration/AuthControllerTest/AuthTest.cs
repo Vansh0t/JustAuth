@@ -1,16 +1,13 @@
 using System.Net.Http;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.Text;
+using System.Threading.Tasks;
+using JustAuth.Tests.Fixtures;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
 namespace JustAuth.Tests.Integration.AuthControllerTest
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Fixtures;
-    using Microsoft.EntityFrameworkCore;
-    using Xunit;
-
     public class AuthTest:IClassFixture<AuthAppFactory>
     {
         private readonly AuthAppFactory app;

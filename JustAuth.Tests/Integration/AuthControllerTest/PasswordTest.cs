@@ -1,22 +1,11 @@
 using System.Net.Http;
-using Newtonsoft.Json;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Configuration;
-using JustAuth.Services.Emailing;
+using System.Threading.Tasks;
+using JustAuth.Tests.Fixtures;
+using Microsoft.EntityFrameworkCore;
+using Xunit;
 namespace JustAuth.Tests.Integration.AuthControllerTest
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Net;
-    using System.Net.Http.Json;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Fixtures;
-    using JustAuth.Data;
-    using Microsoft.AspNetCore.TestHost;
-    using Microsoft.EntityFrameworkCore;
-    using Xunit;
+    
 
     public class PasswordTest:IClassFixture<AuthAppFactory>
     {
@@ -25,7 +14,6 @@ namespace JustAuth.Tests.Integration.AuthControllerTest
         private const string NEW_PASSWORD = "somenewpassword111";
         public PasswordTest(AuthAppFactory app) {
             this.app = app;
-            //NEW_USER_EMAIL = GetNewUserEmail();
         }
         [Fact]
         public async Task TestPasswordResetSuccess() {

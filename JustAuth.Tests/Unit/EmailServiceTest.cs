@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Xunit;
 using System.Threading.Tasks;
 using JustAuth.Services.Emailing;

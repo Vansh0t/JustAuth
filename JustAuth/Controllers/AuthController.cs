@@ -1,12 +1,9 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using JustAuth.Data;
-using JustAuth.Services;
 using JustAuth.Services.Auth;
 using JustAuth.Services.Emailing;
 using JustAuth.Utils;
 using Microsoft.AspNetCore.Authorization;
-using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -224,7 +221,6 @@ namespace JustAuth.Controllers
             if(emailResult.IsError)
                 return emailResult.ToActionResult();
 
-            //await _context.SaveChangesAsync();
             return Ok();
         }
 #endregion

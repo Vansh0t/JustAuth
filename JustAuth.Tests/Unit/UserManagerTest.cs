@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using JustAuth.Data;
 using JustAuth.Tests.Fixtures;
 using JustAuth.Services.Validation;
-using JustAuth.Services;
 using System.Linq;
 using JustAuth.Utils;
 using System;

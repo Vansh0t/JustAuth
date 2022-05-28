@@ -1,6 +1,5 @@
 using JustAuth.Utils;
 using Microsoft.IdentityModel.Tokens;
-using System.Security.Claims;
 namespace JustAuth.Services.Auth
 {
     public class JwtOptions

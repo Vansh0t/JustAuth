@@ -29,7 +29,6 @@ namespace JustAuth.Utils
             byte[] bHash = Convert.FromBase64String(hash);
             byte[] salt = bHash[..HASH_SALT_LENGTH];
             string doHash = HashPassword(password, salt);
-            //byte[] pwdHash = bHash[HASH_SALT_LENGTH..];
             return doHash == hash;
         }
         public static string GetRandomToken() {

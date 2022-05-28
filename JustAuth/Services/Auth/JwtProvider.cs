@@ -2,7 +2,6 @@ using JustAuth.Data;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
-using System.Security;
 
 namespace JustAuth.Services.Auth
 {
@@ -19,7 +18,7 @@ namespace JustAuth.Services.Auth
             var claims = new List<Claim>() { 
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username), 
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-                new Claim("IsEmailVerified", user.IsEmailVerified.ToString())
+                new Claim("IsEmailVerified", user.IsEmailVerified.ToString()) //email verification is always present
                 };
             if(Options.Claims is not null)
                 foreach (var c in Options.Claims)

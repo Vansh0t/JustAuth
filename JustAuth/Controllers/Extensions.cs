@@ -6,7 +6,6 @@ using JustAuth.Services.Emailing;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
-using Microsoft.IdentityModel.JsonWebTokens;
 
 namespace JustAuth.Controllers
 {
