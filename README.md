@@ -1,5 +1,5 @@
 # JustAuth
-Simple, but customizable JWT auth library for .NET Core MVC. The main goal of the project is to create base REST auth library for all kinds of apps (Web, SPA, etc.).
+Simple, but customizable JWT authentication and authorization library made with .NET 6. The main goal of the project is to create a basic REST auth package for all kinds of apps (Web, SPA, etc.).
 ## Features
 1. Two JWT send modes: Cookies for Web and Authorize Header for the rest of apps
 2. Sign In, Sign Up, Sign Out
@@ -13,7 +13,7 @@ Simple, but customizable JWT auth library for .NET Core MVC. The main goal of th
 10. Email templates
 ## Setup
 1. Add nuget to the project
-2. Create your User model and make sure it inherits ``AppUser``
+2. Create your User model and make sure it derives from ``AppUser``
 ```C#
 using JustAuth.Data;
 public class ChatUser:AppUser
@@ -21,7 +21,7 @@ public class ChatUser:AppUser
       //Your properties
     }
 ```
-3. Create your ``DbContext`` implementation and make sure it inherits from ``AuthDbMain<TYourUserModel>``
+3. Create your ``DbContext`` implementation and make sure it derives from ``AuthDbMain<TYourUserModel>``
 ```C#
 using JustAuth.Data;
 public class DbMain: AuthDbMain<ChatUser>
@@ -64,7 +64,7 @@ public class DbMain: AuthDbMain<ChatUser>
     }
 }
 ```
-5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs. Your EmailConfirmRedirect and PasswordResetRedirect endpoints should read token fron query string (``vrft`` for email, ``rst`` for password) and pass it with POST request to the corresponding [endpoint](https://github.com/Vansh0t/JustAuth/blob/master/REST.md#post-authemailvrf). You must set these waypoints with ``UseEmailConfirmRedirect`` and ``UsePasswordResetRedirect`` as shown below.
+5. Add JustAuth services and .NET Auth middleware to your Program.cs or Startup.cs. Your EmailConfirmRedirect and PasswordResetRedirect endpoints should read the token from a query string (``vrft`` for email, ``rst`` for password) and pass it with POST request to the corresponding [endpoint](https://github.com/Vansh0t/JustAuth/blob/master/REST.md#post-authemailvrf). You must set these waypoints with ``UseEmailConfirmRedirect`` and ``UsePasswordResetRedirect`` as shown below.
 ```C#
     services.AddDbContext<IAuthDbMain<ChatUser>, DbMain>(options=>{
         //your options
@@ -81,7 +81,7 @@ public class DbMain: AuthDbMain<ChatUser>
         options.MapDefaultControllerRoute();
     });
 ```
-6. Create ``EmailTemplates`` folder in your app. Create 2 files ``EmailConfirm.html`` and ``PasswordReset.html`` in it. These files will be sent to users for password reset and email change. You can customize their content however you like, but it must contain ``{{actionData}}``, which will be replaced with url. Examples of templates:
+6. Create ``EmailTemplates`` folder in your app. Create 2 files: ``EmailConfirm.html`` and ``PasswordReset.html`` in it. These files will be sent to users for password reset and email change. You can customize their content however you like, but it must contain ``{{actionData}}``, which will be replaced with url. Examples of templates:
 ```html
 <!doctype html>
 <html>
