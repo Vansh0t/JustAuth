@@ -32,7 +32,7 @@ public class DbMain: AuthDbMain<ChatUser>
         }
     }
 ```
-4. Create ``justauth.json`` file in your app's root directory with settings.
+4.<span id="justauthjson" hidden></span> Create ``justauth.json`` file in your app's root directory with settings.
 ```json
 {
     "Emailing": {
